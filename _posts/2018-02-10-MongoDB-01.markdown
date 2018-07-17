@@ -1,0 +1,71 @@
+---
+layout:       post
+title:        "入坑 MongoDB 第一篇"
+subtitle:     "配置安装"
+date:         2018-02-10 20:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 数据库
+    - MongoDB
+    - 配置
+---
+
+>在经历了上个项目的折磨之后，对关系型数据库深恶痛绝。这几天偶然发现竟然还有nosql这种神奇的东西，正好这几天公司有新的项目要做，决定尝尝鲜。这次我采用的现在比较流行的nosql–MongoDB。
+
+之前配置环境都是安装宝塔面板，然后一键安装LNMP环境，导致都不会在Linux上安装配置软件，因为MongoDB并没有mysql那么大众化，所有得自己手动去下载安装，好在这个比较简单，几行命令就能搞定。首先我是先看菜鸟教程的的教程去安装的，但是安装完之后用了两天发现没有配置后台启动，每次关闭xshell之后都要从新打开，很是烦人，折腾了大半天centos如何设置软件自动启动，都没有成功，索性直接重新安装。这次按照CSDN上一个大神的安装教程，几步就搞定了。这里我来介绍一下我自己的安装过程。
+## 下载安装包
+![](/img/in-post/mongodb/MongoDBDownload.png)
+我们进入MongoDB官网，选择Community Server 社区服务，然后选择Linux版本，下拉框版本选择Linux64位，然后复制下方的下载链接，然后我们回到Linux面板中使用wget命令下载
+```shell
+wget https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-3.6.2.tgz
+```
+## 解压配置
+我们将下载后的安装包解压到/usr/local/mongodb 目录下
+```shell
+cd /usr/local
+tar zxvf mongodb-linux-x86_64-3.6.2.tgz
+mv  zxvf mongodb-linux-x86_64-3.6.2 mongodb
+```
+在mongodb目录下面，创建data目录，在data目录下创建db目录和logs目录
+```shell
+mkdir -p /data/db #-p可以连续创建根目录和子目录
+cd data
+mkdir logs
+```
+在logs目录下创建log文件
+```shell
+cd logs
+touch mongodb.log #touch命令 新建一个文件
+```
+在data目录下创建mongodb.conf文件
+```shell
+cd /usr/local/mongodb/data/
+vi mongodb.conf
+```
+我们在mongodb.conf文件下放入以下内容
+```shell
+#端口号
+port = 27017
+#数据目录
+dbpath = /usr/local/mongodb/data/db
+#日志目录
+logpath = /usr/local/mongodb/data/logs/mongodb.log
+#设置后台运行
+fork = true
+#日志输出方式
+logappend = true
+#开启认证
+#auth = true
+```
+启动mongodb服务
+```shell
+cd /usr/local/mongodb/bin
+./mongod --config /usr/local/mongodb/data/mongodb.conf
+```
+进入mongodb shell命令窗口
+```shell
+./mongo
+```
+看到和mysql shell命令窗口一样的小箭头>窗口就说明我们成功了，至此mongodb已经可以正常使用了。

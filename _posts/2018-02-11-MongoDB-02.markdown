@@ -1,0 +1,124 @@
+---
+layout:       post
+title:        "入坑 MongoDB 第一篇"
+subtitle:     "配置安装"
+date:         2018-02-10 20:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 数据库
+    - MongoDB
+    - shell
+---
+
+>[上一篇](https://sunpwork.github.io/2018/02/10/MongoDB-01/)我们主要讲了在centos中如何配置MongoDB，今天我们主要讲一下MongoDB一些基本的shell操作。
+
+## 切换数据库
+与关系型数据库相同，MongoDB中可以对应不同的项目创建不同的database，在MongoDB中切换数据库的命令依旧是use：
+```mongodb
+use DATABASE_NAME #数据库名
+#下面以MongoDBTest数据库为例
+> use MongoDBTest
+switched to db MongoDBTest
+```
+## 创建数据库
+这里我们需要注意，MongoDB中没有create命令，当你use的数据库不存在时，系统会自动去创建数据
+库。如果想要查看当前所在使用的数据库可以使用db命令：
+```mongodb
+> db
+MongoDBTest
+```
+
+## 查看数据库
+如果你想要查看系统中所有的数据库，可以使用 show dbs 命令：
+```mongodb
+> show dbs
+admin    0.000GB
+config   0.000GB
+local    0.000GB
+```
+
+## 关系型数据库与非关系型数据库
+这时候你可能会很奇怪，不是说数据库不存在会自动创建吗，怎么没有看到我刚才创建的MongoDBTest数据库啊。在MongoDB中，刚创建的database是不会显示在列表中的，我们需要先往里面添加一些数据。在关系型数据库中，我们设计数据库时候一般是这样一个流程，先创建database(数据库)，然后在database(数据库)中添加table(表)，每张table(表)有多少列，每一列是什么都是固定的，在添加每一行的新的数据时都必须要照表的结构来，所以每次想要修改表的结构都特别的麻烦。但是在MongoDB中是不存在table(表)的概念的，MongoDB中每个database(数据库)有多个collection(集合),collection(集合)中的每一条数据叫做document(文档)，下面以user来对关系型数据库和MongoDB分别举例：
+
+* 关系型数据库(mysql)
+
+![mysql](/img/in-post/mongodb/mysqlTest.png)
+
+* 非关系型数据库(mongodb)
+
+![mongodb](/img/in-post/mongodb/MongoDBTest.png)
+
+在关系型数据库中，我们有一张user表，user表里面包含id、name、tel三列，每次插入新的一行数据时，我们只能插入这三列，不能多也不能少，当然是可以为null的。但是我们看MongoDB限制就没有这么多了，我第一条数据包含_id、name、tel三列(_id为MongoDB自动生成的列，用来标识每一条数据，生成方式为时间戳+随机数)，第二条数据我可以再多加一列address，到第三条我甚至可以不填name，这和关系型数据库留空不一样，你不填就是没有这一列数据。上面说了这么多就只想表达一个意思，MongoDB中collection(集合)中的document(文档)格式很灵活，没有固定死的结构，但通常情况下我们插入集合的数据都会有一定的关联性。
+
+## 增删改查操作
+### insert
+既然在MongoDB中collection(集合)没有固定的结构，所以我们在创建新的collection(集合)也很方便了，但其实在MongoDB中也不存在创建collection(集合)的命令的，如果我们要用到新的collection(集合)，直接用insert命令往里面添加东西就好了，若这个collection(集合)不存在，系统会自动创建的。下面以user为例来演示insert命令：
+```mongodb
+> db.user.insert({'name':'sunpwork','tel':'12345678910'})
+WriteResult({ "nInserted" : 1 })
+```
+insert()命令括号里面填写的内容就是你要插入的内容，其实大家仔细看一下这个东西，其实和json的格式差不多，都是字典的形式，一个key对应一个value。
+
+### find
+```mongodb
+> db.user.find()
+{ "_id" : ObjectId("5a7aeed10f4e9c6ec41fa80d"), "name" : "sunpwork", "tel" : "12345678910" }
+```
+find()命令括号里面填写的是查询的条件，比如说我们要查询name为sunpwork的用户信息：
+```mongodb
+> db.user.find({'name':'sunpwork'})
+{ "_id" : ObjectId("5a7aeed10f4e9c6ec41fa80d"), "name" : "sunpwork", "tel" : "12345678910" }
+```
+如要想要输出的结果整洁美观一点，我们可以使用pretty命令:
+```mongodb
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7aeed10f4e9c6ec41fa80d"),
+	"name" : "sunpwork",
+	"tel" : "12345678910"
+}
+```
+查询操作我们暂时先讲这么多，等到后面我们会把查询单独做一篇细讲，接下来我们来讲一下删除操作 remove命令的用法：
+
+### remove
+```mongodb
+#先多填加几条数据
+> db.user.insert({'name':'sun','address':'wordpress'})
+WriteResult({ "nInserted" : 1 })
+> db.user.insert({'name':'moonkop','tel':'98765432100','address':'wordpress'})
+WriteResult({ "nInserted" : 1 })
+> db.user.remove({'name':'sun'})
+WriteResult({ "nRemoved" : 1 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7aeed10f4e9c6ec41fa80d"),
+	"name" : "sunpwork",
+	"tel" : "12345678910"
+}
+{
+	"_id" : ObjectId("5a7af0a70f4e9c6ec41fa80f"),
+	"name" : "moonkop",
+	"tel" : "98765432100",
+	"address" : "wordpress"
+}
+```
+和find()一样，remove()操作括号里面填写的也是条件，格式都是一样的，都是key:value的形式，当然，要是多个条件也是可以的
+```mongodb
+> db.user.remove({'name':'moonkop','tel':'110'})
+WriteResult({ "nRemoved" : 0 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7aeed10f4e9c6ec41fa80d"),
+	"name" : "sunpwork",
+	"tel" : "12345678910"
+}
+{
+	"_id" : ObjectId("5a7af0a70f4e9c6ec41fa80f"),
+	"name" : "moonkop",
+	"tel" : "98765432100",
+	"address" : "wordpress"
+}
+```
+我们这里尝试删除name为moonkop，tel为110的user信息，但是表里的根本不存在的，哈哈哈哈，所有提示nRemoved:0，删除0条数据。增删查都已经讲过了，剩下的还有修改，因为修改涉及的操作比较多，这篇文章里面就暂时不讲了。
