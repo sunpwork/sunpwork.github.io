@@ -1,0 +1,182 @@
+---
+layout:       post
+title:        "入坑 MongoDB 第五篇"
+subtitle:     "创建用户和远程连接"
+date:         2018-02-25 17:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 数据库
+    - MongoDB
+    - 创建用户
+    - 远程连接
+---
+
+在使用mysql的时候，我们可以创建不同的用户去管理不同的数据库，并且可以给他们分配不同的权限，MongoDB同样有用户机制，下面我们先来讲一下如何在MongoDB中添加用户。首先我们先进入MongoDB的shell面板，然后进入到admin数据库，我们先创建管理admin的超级管理员用户。
+
+```
+> use admin
+switched to db admin
+> db.createUser(
+...     {
+...         user:"myadmin",
+...         pwd:"myadminPassword",
+...         roles:[
+...             {
+...                 role:"root",
+...                 db:"admin"
+...             }
+...         ]
+...     }
+... )
+Successfully added user: {
+	"user" : "myadmin",
+	"roles" : [
+		{
+			"role" : "root",
+			"db" : "admin"
+		}
+	]
+}
+```
+
+在[第一篇](https://sunpwork.github.io/2018/02/10/MongoDB-01/)配置中我们讲到`mongodb.conf`这个配置文件，在配置文件中有`auth=true`这一行被我们注释了不知道大家有没有注意到。
+```
+#端口号
+port = 27017
+#数据目录
+dbpath = /usr/local/mongodb/data/db
+#日志目录
+logpath = /usr/local/mongodb/data/logs/mongodb.log
+#设置后台运行
+fork = true
+#日志输出方式
+logappend = true
+#开启认证
+#auth = true
+```
+所以在之前的使用过程中我们都是免验证使用MongoDB的，现在我们将注释去掉并用MongoDB文件bin目录下的mongod重新配置MongoDB。配置完之后我们重新进入到shell命令，尝试查看数据库：
+```
+> show dbs
+2018-02-25T20:09:16.773+0800 E QUERY    [thread1] Error: listDatabases failed:{
+	"ok" : 0,
+	"errmsg" : "not authorized on admin to execute command { listDatabases: 1.0, $db: \"admin\" }",
+	"code" : 13,
+	"codeName" : "Unauthorized"
+} :
+_getErrorWithCode@src/mongo/shell/utils.js:25:13
+Mongo.prototype.getDBs@src/mongo/shell/mongo.js:65:1
+shellHelper.show@src/mongo/shell/utils.js:813:19
+shellHelper@src/mongo/shell/utils.js:703:15
+@(shellhelp2):1:1
+```
+这里系统会提示错误，我们可以看到错误信息中的codeName为Unauthorized，就是说我们需要认证用户：
+```
+> use admin
+switched to db admin
+> db.auth('myadmin','myadminPassword')
+1
+> show dbs
+admin   0.000GB
+config  0.000GB
+local   0.000GB
+```
+这里我们需要注意，因为我们的用户是在admin数据库中创建的，所有必要要到admin中去认证，返回1表示成功，再次查看系统所有数据库成功。admin管理员我们基本都是作为MongoDB的超级管理员使用的，下面我们要为其他数据库单独创建用户：
+```
+#创建测试数据库并插入数据
+> use test
+switched to db test
+> db.testTable.insert({'name':'test'})
+WriteResult({ "nInserted" : 1 })
+#为test数据库创建用户
+> db.createUser(
+...     {
+...         user:"test",
+...         pwd:"testPassword",
+...         roles:[
+...             {
+...                 role:"dbOwner",
+...                 db:"test"
+...             }
+...         ]
+...     }
+... )
+Successfully added user: {
+	"user" : "test",
+	"roles" : [
+		{
+			"role" : "dbOwner",
+			"db" : "test"
+		}
+	]
+}
+> exit
+```
+用户的role有下面几种（这里参照[CSDN](https://blog.csdn.net/ling811/article/details/56844395)一个大神所整理）：
+
+1. 数据库用户角色：read、readWrite;  
+2. 数据库管理角色：dbAdmin、dbOwner、userAdmin；       
+3. 集群管理角色：clusterAdmin、clusterManager、clusterMonitor、hostManager；
+4. 备份恢复角色：backup、restore；
+5. 所有数据库角色：readAnyDatabase、readWriteAnyDatabase、userAdminAnyDatabase、dbAdminAnyDatabase
+6. 超级用户角色：root  
+// 这里还有几个角色间接或直接提供了系统超级用户的访问（dbOwner 、userAdmin、userAdminAnyDatabase）
+7. 内部角色：__system
+
+他们的权限大致如下：
+>read:允许用户读取指定数据库 </br>
+readWrite:允许用户读写指定数据库 </br>
+dbAdmin：允许用户在指定数据库中执行管理函数，如索引创建、删除，查看统计或访问system.profile </br>
+userAdmin：允许用户向system.users集合写入，可以找指定数据库里创建、删除和管理用户 </br>
+clusterAdmin：只在admin数据库中可用，赋予用户所有分片和复制集相关函数的管理权限。 </br>
+readAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的读权限 </br>
+readWriteAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的读写权限</br> 
+userAdminAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的userAdmin权限</br> 
+dbAdminAnyDatabase：只在admin数据库中可用，赋予用户所有数据库的dbAdmin权限。 </br>
+root：只在admin数据库中可用。超级账号，超级权限</br>
+
+除了在进入shell面板的之后进行身份认证，我们还可以在向mysql那样在使用用户名和密码直接登录MongoDB：
+```
+[root@VM_7_27_centos local]# ./mongodb/bin/mongo 127.0.0.1/test -utest -p
+MongoDB shell version v3.6.2
+Enter password: 
+connecting to: mongodb://127.0.0.1:27017/test
+MongoDB server version: 3.6.2
+```
+当然，如果我们将这里的127.0.0.1换成其他ip可以远程访问其他服务器的MongoDB数据库。当然我们也需要修改mongodb.conf文件中我配置，加远程访问打开：
+```
+#端口号
+port = 27017
+#数据目录
+dbpath = /usr/local/mongodb/data/db
+#日志目录
+logpath = /usr/local/mongodb/data/logs/mongodb.log
+#设置后台运行
+fork = true
+#日志输出方式
+logappend = true
+#开启认证
+auth = true
+bind_ip=0.0.0.0
+```
+
+我们在最后一行加入bind_ip=0.0.0.0允许任意ip连接数据库，但是我们必须要开启认证后打开远程连接，不然任何人都可以不需要认证就访问我们的数据库。
+
+在使用mysql的时候，我们可以使用phpmyadmin，Navicat 等可视化工具去操作数据库，MongoDB也提供了许多可视化工具，这里我们使用MongoDB官网推荐的工具：
+
+![MongoDB主页](/img/in-post/mongodb/mongodb-homepage.png)
+
+下载之后直接打开，根据提示填写相关信息：
+
+![compass连接](/img/in-post/mongodb/compass-login.png)
+
+我们只要填写服务器ip，将Authentication切换至Username/Password，输入用户名和密码以及数据，点击下方的连接按钮。但是现在似乎还是连接不上，因为服务器的27017端口默认是关闭的，我们要将它放行，具体在宝塔面板里面或者shell面板里面放行都可以，放行后尝试重新连接可以进入可视化面板：
+
+![可视化面板](/img/in-post/mongodb/compass-panel.png)
+
+除了官方给的这个可视化工具，我们同样可以使用jetbrains工具中的插件：
+
+![jetbrain可视化面板](/img/in-post/mongodb/jetbrain-panel.png)
+
+这里我们要注意，mongodb默认的加密方式是SCRAM-SHA-1,但是phpstorm的default却不是，很奇怪，所以连接的时候注意切换一下就可以了。

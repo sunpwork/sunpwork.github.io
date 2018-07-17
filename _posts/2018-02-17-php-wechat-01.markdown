@@ -1,0 +1,64 @@
+---
+layout:       post
+title:        "PHP开发微信公众号 第一篇"
+subtitle:     "服务器配置"
+date:         2018-02-17 18:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 微信公众号开发
+    - PHP    
+---
+
+>新年伊始，这几天一直放假在家事情比较多，所有很长时间没有更博了，今天我们开始从进入新的篇章，使用PHP来开发微信公众号后台开发。
+
+首先我们先简单的介绍一下微信公众号，公众号分为服务号和订阅号，两者都可以用于开发，服务号的可拓展性更强，订阅号我们一般用于推送“鸡汤文”。但是服务号也必须要进行企业认证才能开放所有功能。当然，为了方便开发者，腾讯开放了测试账号给用户进行使用。这里我们以申请好的服务号作为举例，测试账号里面其实也大同小异。我们进入到微信公众平台的管理界面之后，我们选择开发-基本配置中进行配置，首先我们先开启服务器配置。
+
+![wechatconfig](/img/in-post/php_wechat/wechatconfig.png)
+这里的URL是指你服务器上作为微信公众号所有信息接收以及装发的URL，若你的ip(或者是域名)为112.128.1.1，那你可以在配置完lamp或者lnmp环境之后，在/www/wwwroot/112.128.1.1文件下创建为WechatUrl.php的文件。然后上天中URL处填写112.128.1.1/WechatUrl.php,Token填写任意字符串即可，这个是作为微信来认证这个服务器确实是你本人所有的一个验证依据。接下来我们在WechatUrl.php文件下编写代码进行校验。
+
+```php
+<?php
+
+define('TOKEN', 'sunpwork');
+
+$wechatObj = new WechatURL();
+$wechatObj->Valid();
+
+class WechatURL
+{
+    public function Valid()
+    {
+        if (isset($_GET["echostr"])) {
+            if ($this->CheckSignature()) {
+                echo $_GET["echostr"];
+                exit;
+            }
+        }
+    }
+
+    public function CheckSignature()
+    {
+        // you must define TOKEN by yourself
+        if (!defined("TOKEN")) {
+            throw new Exception('TOKEN is not defined!');
+        }
+        $signature = $_GET["signature"];
+        $timestamp = $_GET["timestamp"];
+        $nonce = $_GET["nonce"];
+        $token = TOKEN;
+        $tmpArr = array($token, $timestamp, $nonce);
+        // use SORT_STRING rule
+        sort($tmpArr, SORT_STRING);
+        $tmpStr = implode($tmpArr);
+        $tmpStr = sha1($tmpStr);
+        if ($tmpStr == $signature) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+```
+这段代码也是我在简书上看一位大神那借鉴过来的，这里附上[原文链接](https://www.jianshu.com/p/79b54d0537b1)，这里简单的说明一下，define中的TOKEN就是我们在微信公众号中填写的token，CheckSignature方法是根据微信公众号文档的校验规则而写的，微信在访问这个页面时，会通过http get请求发送echostr,signature(签名),timestamp(时间戳),nonce(随机字符串)这三样东西，signature是根据timestamp,nonce,token三样东西计算得出，而我们的校验则是将这三样东西用同样的规则进行运算，看最后得出的结果是否与signature一致，如果相同说明这是微信发送给我们的请求，我们将微信发送给我们的echostr再原样返回，echo str顾名思义不就是输出的字符串吗。当然，如果你不进行校验直接把echostr输出也是可以通过认证的。

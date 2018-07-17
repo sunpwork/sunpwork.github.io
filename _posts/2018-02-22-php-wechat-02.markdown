@@ -1,0 +1,163 @@
+---
+layout:       post
+title:        "PHP开发微信公众号 第二篇"
+subtitle:     "创建自定义菜单"
+date:         2018-02-22 19:55:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 微信公众号开发
+    - PHP    
+    - 自定义菜单
+---
+
+>在微信公众号中，大部分功能实现的主要切入口就是自定义菜单，今天我们来了解一下微信给我们开发者提供的自定义菜单的创建接口。
+
+自定义菜单接口可实现多种类型按钮，如下：
+
+1. click：点击推事件用户点击click类型按钮后，微信服务器会通过消息接口推送消息类型为event的结构给开发者（参考消息接口指南），并且带上按钮中开发者填写的key值，开发者可以通过自定义的key值与用户进行交互；
+2. view：跳转URL用户点击view类型按钮后，微信客户端将会打开开发者在按钮中填写的网页URL，可与网页授权获取用户基本信息接口结合，获得用户基本信息。
+3. scancode_push：扫码推事件用户点击按钮后，微信客户端将调起扫一扫工具，完成扫码操作后显示扫描结果（如果是URL，将进入URL），且会将扫码的结果传给开发者，开发者可以下发消息。
+4. scancode_waitmsg：扫码推事件且弹出“消息接收中”提示框用户点击按钮后，微信客户端将调起扫一扫工具，完成扫码操作后，将扫码的结果传给开发者，同时收起扫一扫工具，然后弹出“消息接收中”提示框，随后可能会收到开发者下发的消息。
+5. pic_sysphoto：弹出系统拍照发图用户点击按钮后，微信客户端将调起系统相机，完成拍照操作后，会将拍摄的相片发送给开发者，并推送事件给开发者，同时收起系统相机，随后可能会收到开发者下发的消息。
+6. pic_photo_or_album：弹出拍照或者相册发图用户点击按钮后，微信客户端将弹出选择器供用户选择“拍照”或者“从手机相册选择”。用户选择后即走其他两种流程。
+7. pic_weixin：弹出微信相册发图器用户点击按钮后，微信客户端将调起微信相册，完成选择操作后，将选择的相片发送给开发者的服务器，并推送事件给开发者，同时收起相册，随后可能会收到开发者下发的消息。
+8. location_select：弹出地理位置选择器用户点击按钮后，微信客户端将调起地理位置选择工具，完成选择操作后，将选择的地理位置发送给开发者的服务器，同时收起位置选择工具，随后可能会收到开发者下发的消息。
+9. media_id：下发消息（除文本消息）用户点击media_id类型按钮后，微信服务器会将开发者填写的永久素材id对应的素材下发给用户，永久素材类型可以是图片、音频、视频、图文消息。请注意：永久素材id必须是在“素材管理/新增永久素材”接口上传后获得的合法id。
+10. view_limited：跳转图文消息URL用户点击view_limited类型按钮后，微信客户端将打开开发者在按钮中填写的永久素材id对应的图文消息URL，永久素材类型只支持图文消息。请注意：永久素材id必须是在“素材管理/新增永久素材”接口上传后获得的合法id。
+
+几乎所有的接口调用方式都是使用http请求，微信也不例外，创建菜单使用post请求将菜单的具体信息以json格式发送给微信服务器。下面我们举例
+```json
+ {
+     "button":[
+     {    
+          "type":"click",
+          "name":"获取推送",
+          "key":"getInfo"
+      },
+      {
+           "name":"二级菜单",
+           "sub_button":[
+           {    
+               "type":"view",
+               "name":"百度",
+               "url":"http://www.baidu.com/"
+            },
+            {
+               "type":"pic_photo_or_album",
+               "name":"发送照片",
+               "key":"sendPic"
+            }]
+       }]
+ }
+```
+请求的URL为：`https://api.weixin.qq.com/cgi-bin/menu/create?access_token=ACCESS_TOKEN`
+
+access_token是公众号的全局唯一接口调用凭据，公众号调用各接口时都需要使用access_token。access_token的有效期为2小时，需要定时刷新。下面我们在程序中完成access_token的获取与刷新：
+
+```php
+define('tokenFile',$_SERVER['DOCUMENT_ROOT'] . '/access_token.json');
+class WechatAPI
+{
+    static $appid = 'APPID';
+    static $secret = 'APPSECRET';
+
+    public $access_token;
+
+    public function __construct()
+    {
+        $data = (array) json_decode(file_get_contents(tokenFile), true);
+        if (!isset($data['last_time']) or time() - $data['last_time'] > 7200 or !$data['last_time']) //过期重新获取access_token
+        {
+            $arrParams = array(
+                'grant_type' => 'client_credential',
+                'appid' => self::$appid,
+                'secret' => self::$secret,
+            );
+            $url = "https://api.weixin.qq.com/cgi-bin/token?" . http_build_query($arrParams);
+
+            $res = http_Request($url);
+            $res = json_decode($res, true);
+            if ($res['access_token']) {
+                $this->access_token = $res['access_token'];
+                $data = array(
+                    'last_time' => time(),
+                    'access_token' => $res['access_token'],
+                );
+                $fp = fopen(tokenFile, 'w');
+                fwrite($fp, json_encode($data));
+                fclose($fp);
+            }
+            else
+            {
+                throw new Exception($res['errmsg'],-1);
+            }
+        } else {
+            $this->access_token = $data['access_token'];
+        }
+    }
+}
+```
+AppID(开发者ID)和AppSecret(开发者密码)在微信公众号的后台可获取，在构造函数中，我们将获取到的access_token以及获取的时间以JSON文件的形式存储在服务器中，在下一次调用时，我们先获取文件中的access_token和获取时间，若过期重新获取并保存。这里要说明一下，想要获取access_token，除了要知道AppID和AppSecret之外，我们还要在微信公众号后台将我们所使用的服务器的ip加入IP白名单。
+
+在获取到access_token之后，我们可以使用微信的[接口调试工具](https://mp.weixin.qq.com/debug/)先来试一下自定义菜单的创建：
+
+![微信调试工具](/img/in-post/php_wechat/wechat_debug.png)
+
+填写完access_token和body后，点击检查问题即可给对应的公众号创建自定义菜单。但是每次要修改自定义菜单都要去找微信接口测试工具，然后把access_token复制出来是不是太麻烦了呢，我目前创建菜单的方法是在网站的根目录创建一个createMenu.php的文件，内容如下：
+
+```php
+$wechatapi = new WechatAPI();
+$access_token = $wechatapi->access_token;
+$userIndexUrl = 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=' . WechatAPI::$appid . '&redirect_uri=http://express.moonkop.com/index.php&response_type=code&scope=snsapi_userinfo#wechat_redirect';
+$meauJson = '
+     {
+     "button":[
+     {    
+          "type":"click",
+          "name":"获取推送",
+          "key":"getInfo"
+      },
+      {
+           "name":"二级菜单",
+           "sub_button":[
+           {    
+               "type":"view",
+               "name":"百度",
+               "url":"http://www.baidu.com/"
+            },
+            {
+               "type":"pic_photo_or_album",
+               "name":"发送照片",
+               "key":"sendPic"
+            }]
+       }]
+ }';
+
+$url = "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=" . $access_token;
+$result = http_Request($url, $meauJson);
+var_dump($result);
+```
+
+http_Request方法的定义如下：
+
+```php
+function http_Request($url, $data=null)
+{
+    $curl = curl_init();
+    curl_setopt($curl,CURLOPT_URL,$url);
+    curl_setopt($curl,CURLOPT_SSL_VERIFYPEER,FALSE);
+    curl_setopt($curl,CURLOPT_SSL_VERIFYHOST,FALSE);
+    if(!empty($data))
+    {
+        curl_setopt($curl,CURLOPT_POST,1);
+        curl_setopt($curl,CURLOPT_POSTFIELDS,$data);
+    }
+    curl_setopt($curl,CURLOPT_RETURNTRANSFER,true);
+    $output = curl_exec($curl);
+    curl_close($curl);
+    return $output;
+}
+```
+这样每次我们需要修改菜单时，只需要修改createMenu.php中meauJson 的值即可，当然在此基础上我们可以自己写一个创建菜单的页面。

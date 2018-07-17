@@ -1,0 +1,115 @@
+---
+layout:       post
+title:        "Java Web 开发 第一篇"
+subtitle:     "Tomcat部署与Servlet基本使用"
+date:         2018-03-16 17:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - Java
+    - Web开发
+    - Tomcat
+    - Servlet
+---
+
+在学习使用PHP搭建站点的时候,我们通常在服务器上安装LAMP或者LNMP继承环境，LAMP中的A代表的是Apache，当然，现在主流的服务器有两种，微软的IIS以及Apache。但是他们都不支持jsp以及Servlet，要想在这些Web服务器软件中运行Servlet和JSP，还必须将它们和某种Servlet和JSP容器（引擎）进行集成，下面就引出了今天的主角之一Tomcat。
+
+对应Tomcat我这里不做过多的介绍了，直接进入配置安装环节。进入Tomcat官网下载对应的安装包，Windows下有zip和exe两个版本，exe版本的就是下载完之后一直下一步无脑安装就好了，zip版本好像是要配置一下环境变量才能使用，因为我电脑上已经无脑安装了，zip免安装版的步骤就不多说了。在安装完之后，我们找到安装路径下的bin路径下：
+
+```
+C:\Program Files\Apache Software Foundation\Tomcat 8.5\bin
+```
+
+在bin目录下有个文件 tomcat8w.exe ，打开他可以看到一个面板：
+
+![Tomcat](/img/in-post/javaweb/Tomcat-Start.png)
+
+点击start按钮开启Tomcat服务，然后我们打开浏览器输入：`http://localhost:8080/`
+
+![Tomcat](/img/in-post/javaweb/Tomcat-Page.png)
+
+看到如上的界面就说明Tomcat服务配置成功了，这里的8080是Tomcat的默认端口，而一般网站的默认端口为80，下面我们来修改Tomcat的默认端口，我们打开Tomcat目录下的conf文件夹`C:\Program Files\Apache Software Foundation\Tomcat 8.5\conf`
+
+在conf文件夹中有一个叫 server.xml 配置文件，右键编辑它，然后找到如下的字段：
+
+```xml
+    <Connector port="8080" protocol="HTTP/1.1"
+               connectionTimeout="20000"
+               redirectPort="8443" />
+```
+
+然后我们将8080修改为80就可以了，但是修改完配置并不会立即生效，我们还需要将Tomcat关闭后重启才会生效。接下来我们在浏览器直接输入localhost就可以看到Tomcat了。
+
+一个高效率的程序员肯定要配备高效率的IDE，这里我们使用的jetbrain公司的IDEA，下面我们来讲一下如何在IDEA 中创建Java Web程序并在Tomcat中运行。
+
+IDEA的JDK配置我这里就不讲了，只要你电脑中已经配置好jdk，然后在创建项目的时候一步步跟着引导走就可以了，下面我们在IDEA中创建一个Java Web项目：
+
+
+
+New Project->Java->Java EE->Web Application，点击下一步确定好项目名就好了。
+
+![Example-Project](/img/in-post/javaweb/Example-Project.png)
+
+我们来看一下一个Java Web项目的目录结构，src用于存储java的模型和控制类，web用于存放静态网页和jsp动态网页。下面我们来讲一下Servlet，Servlet其实可以用一句话来概括他的用处，就是用来处理网页发送的HTTP请求的一个类，但是Servlet中并没有main方法，他受另一个Java应用，这个Java应用称为容器，而前面的Tomcat就是这样一个容器，Web服务器应用得到一个指向servlet的请求时，服务器不是把这个请求交给servlet本身，而是交给部署该servlet的容器。要由容器向servlet提供HTTP请求和响应，而且要由容器调用servlet的方法（如doPost()或doGet()），我们下面来讲如何创建一个servlet并且部署使用。
+
+![createServlet](/img/in-post/javaweb/createServlet.png)
+
+右键src->New->Servlet，创建一个Servlet名为ServletTest
+
+![IDEAError](/img/in-post/javaweb/IDEAError.png)
+
+创建成功后我们看到IDEA似乎报错了，我们把鼠标移到servlet上面查看错误提示，好像是我们的项目中没有java EE 6的jar包，根据提示直接下载安装吗，下面我们来看一下这段自动生成的代码：
+
+```java
+import java.io.IOException;
+
+@javax.servlet.annotation.WebServlet(name = "ServletTest")
+public class ServletTest extends javax.servlet.http.HttpServlet {
+    protected void doPost(javax.servlet.http.HttpServletRequest request, javax.servlet.http.HttpServletResponse response) throws javax.servlet.ServletException, IOException {
+
+    }
+
+    protected void doGet(javax.servlet.http.HttpServletRequest request, javax.servlet.http.HttpServletResponse response) throws javax.servlet.ServletException, IOException {
+
+    }
+}
+```
+
+我们先讲第一行 @javax.servlet.annotation.WebServlet(name = "ServletTest")暂且注释了不要看，这是servlet 3.0的新特性：注解，下面我会将如何在web.xml中配置servlet。我们创建的这个类继承了HttpServlet这个类（其实HttpServlet往上还有好几层继承关系，这里我们就不细讲了）然后我们要重写doGet()与doPost()这两个方法。这两个方法顾名思义，就是用来处理两个不同的http请求（也是我们最常用的请求方式）,下面我们来尝试一下，在doGet方法中写入如下内容：
+
+```java
+protected void doPost(javax.servlet.http.HttpServletRequest request, javax.servlet.http.HttpServletResponse response) throws javax.servlet.ServletException, IOException {
+        System.out.println("http get");
+    }
+```
+
+servlet已经编写好，但是容器如何找到正确的servlet，比如说URL怎么跟一个servlet关联呢，下面我们来讲一下web.xml 站点配置文件，前面我们说过，servlet3.0支持注解，所以IDEA并没有给我们自动创建web.xml文件，下面我们来手动创建：我们在web目录下创建一个WEB_INF文件（这个文件具体的含义我们在之后的内容中将），然后在WEB_INF中创建一个名为 web.xml的文件
+
+```xml
+<web-app xmlns="http://java.sun.com/xml/ns/j2ee" version="2.4">
+    
+    <servlet>
+        <servlet-name>ServletTest</servlet-name>
+        <servlet-class>ServletTest</servlet-class>
+    </servlet>
+    
+    <servlet-mapping>
+        <servlet-name>ServletTest</servlet-name>
+        <url-pattern>/ServletTest.do</url-pattern>
+    </servlet-mapping>
+    
+</web-app>
+```
+
+`<web-app>`标记这是一个web站点，后面的内容其实不止可以放这一点，我们后面再讲，我们看下面的servlet标签，这个标签用于告诉容器这个web站点有哪些servlet。servlet-name代表这个servlet的名称，可以任意起，servlet-class表示这个servlet的包名+类名（这里我们并没有创建包），而下面的servlet-mapping用来绑定url对应的servlet，servlet-name就是上面创建的servlet中的servlet-name，url-pattern就是用户访问这个servlet的url，注意一点要加/，后面的do只是一个约定。
+
+我们在上面提到，servlet需要依托Tomcat才能运行，下面我们讲一下如何在IDEA中配置本地Tomcat环境，点击 Run->Edit Configurations 展开Defaults找到Tomcat Server->local，点击configure选择Tomcat本地安装路径即可，然后保存。
+
+![idea-config-tomcat](/img/in-post/javaweb/idea-config-tomcat.png)
+
+然后我们再次点击Run->run,选择index.jsp(这是IDEA默认创建的jsp文件)，这时候可能会报错，告诉你80端口已被占用，我们需要刚才开启的Tomcat服务关闭即可。这时候我们就已经成功的在IDEA中开启Tomcat服务，当然 index.jsp显示的东西与本章所讲无关，我们直接在让浏览器访问`localhost/ServletTest.do`
+
+然后我们看到控制台中输出了 http get，说明servlet被成功调用了
+
+![ServletTest](/img/in-post/javaweb/ServletTest.png)

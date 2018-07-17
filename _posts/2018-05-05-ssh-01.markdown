@@ -1,0 +1,50 @@
+---
+layout:       post
+title:        "微信公众号开发 使用ssh反向代理进行本地调试"
+subtitle:     ""
+date:         2018-05-05 19:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - ssh
+    - 反向代理
+---
+
+>最近在做微信公众号开发，因为微信公众号许多功能只能部署在外网服务器上才能调试，所以在开发阶段调试起来非常的不方便，在网上找了一大堆解决方案，最后发现了ssh反向代理这个神奇的东西。
+
+首先准备阶段，上面已经说过了，微信开发需要一台外网上能够访问的服务器，同时一些功能还需要已经备案过的域名，然后服务器和你本地电脑都必须安装ssh服务。然后在远程服务器上面修改一下ssh的配置：
+```
+vi /etc/ssh/sshd_config
+```
+
+在这个配置文件中的任意一行加入如下语句
+```
+`GatewayPorts yes`
+```
+然后重启服务器的sshd服务
+```
+service sshd reload
+```
+看到如下的提示就说明配置生效了：
+```
+Reloading sshd:                                            [  OK  ]
+```
+
+下面在本地电脑执行ssh命令：
+```
+ssh -N -v -R 8080:localhost:80 root@vps
+```
+
+`-N`表示不执行远程命令. 用于转发端口 `-R`表示远程转发 `-v`表示开启调试 `8080`为远程服务器转发端口，`localhost:80`为转发到本地的端口，`root@vps`分别为远程主机ip和用户名，回车后输入远程主机的密码，看到下面的提示说明配置转发成功：
+```
+Authenticated to xkx.xinsulv.com ([122.114.151.110]:22).
+debug1: Remote connections from LOCALHOST:8080 forwarded to local address localhost:80
+debug1: Requesting no-more-sessions@openssh.com
+debug1: Entering interactive session.
+debug1: pledge: network
+debug1: remote forward success for: listen 8080, connect localhost:80
+debug1: All remote forwarding requests processed
+```
+
+这样一来，远程服务器8080端口所有的请求都被转发到本地了。

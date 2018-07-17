@@ -1,0 +1,31 @@
+---
+layout:       post
+title:        "Java Web 开发 第二篇"
+subtitle:     "在Intellij Idea中使用JSTL标签库"
+date:         2018-03-17 18:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - Java
+    - Web开发
+    - JSTL
+---
+
+>这一篇跨度与上一篇的跨度有点大，我直接跳过了servlet与jsp的基本知识，来讲解JSTL标签库的使用。
+
+在IDEA中是没有JSTL标签库支持的，我们必须手动配置，首先到官网下载JSTL标签库，我们往下翻下载最新也就是‘jakarta-taglibs-standard-1.1.2.zip’的就可以了，下载之后解压到本地。然后我们将lib目录下的list.jar、standard.jar复制到我们项目中的web/WEB-INF/lib目录下
+
+![JSTL-config](/img/in-post/javaweb/JSTL-config.png)
+
+这时候我们在jsp中加入taglib指令：`<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>`
+
+![JSTL-ERROR](/img/in-post/javaweb/JSTL-ERROR.png)
+
+但是这时候还是会报红线，因为IDE它不认识这个标签，所以需要在设置里进行添加。选择File—>Setting在Setting下找到languages&Frameworks—->Schemas and DTDs,在上边的External Schemas and DTDs框下点击+,然后在URI中填入`http://java.sun.com/jsp/jstl/core`
+
+![JSTL-DTD-CONFIG](/img/in-post/javaweb/JSTL-DTD-CONFIG.png)
+
+配置完之后我们就可能正常使用JSTL标签库了
+
+![JSTL-success](/img/in-post/javaweb/JSTL-success.png)

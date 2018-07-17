@@ -1,0 +1,326 @@
+---
+layout:       post
+title:        "入坑 MongoDB 第三篇"
+subtitle:     "关系内嵌与查询"
+date:         2018-02-12 21:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 数据库
+    - MongoDB
+    - 关系内嵌
+    - 查询
+---
+在数据库的设计中，我们经常会遇到一对多，或者多对多的关系，比如说你我们现在要做一个购物平台，每个用户会存在多个收货地址，收货地址信息包括姓名、联系方式、收货地点，在关系型数据库中，我们无法将用户的多个地址和用户基本信息存放在同一张表中。一般我们会这样做，用户基本信息作为一张表，然后再创建一张用户收货地址表，用用户的id作为外键去关联这两张表。但是在MongoDB中，我们的document(文档)是可以存储数组的，在上面这个例子中，我们就可以将用户不同的收货地址信息内嵌到用户信息表当中了，具体插入语句如下：
+```mongodb
+> db.user.insert({
+...     'username':'sunpwork',
+...     'address':[
+...         {
+...             'name':'张三',
+...             'tel':'1122334455',
+...             'detailedAddress':'xx road'
+...         },
+...         {
+...             'name':'李四',
+...             'tel':'1144556677',
+...             'detailedAddress':'yy road'
+...         }
+...     ]
+... })
+WriteResult({ "nInserted" : 1 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7c4d73952a7b319c682383"),
+	"username" : "sunpwork",
+	"address" : [
+		{
+			"name" : "张三",
+			"tel" : "1122334455",
+			"detailedAddress" : "xx road"
+		},
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	]
+}
+```
+注意，这里的数组的表示符号是[]中括号，在上面的例子中，我们插入了一个用户名为sunpwork的用户信息，他有两个收货地址信息，第一个是姓名叫张三，联系电话是112234455，地址在xx road，第二个是姓名叫李四，联系电话是1144556677，地址在yy road，这样我们将用户的基本信息和地址信息放在同一个文档中，这样有助于数据的读取和维护。
+
+在关系型数据库中，我们可能比较头疼的是查询操作，在nosql中，各个文档(数据表)之间的关联已经很少了，所有查询操作很方便了，但是因为同一个文档里面的可以内嵌数组，我们的更新操作就稍许麻烦了些，首先我们来看一下update语句的格式：
+
+(特此说明一下，一下内容我是在看过CSDN上面一个大佬的博客学习之后根据自己的理解写的，原文链接：http://blog.csdn.net/user_longling/article/details/52398667)
+
+# MongoDB update
+
+`db.collection.update( criteria, objNew, upsert, multi )`
+
+`criteria` : update的查询条件，类似sql update查询内where后面的
+
+`objNew`   : update的对象和一些更新的操作符（如$,$inc…）等，也可以理解为sql update查询内set后面的
+
+`upsert`   : 这个参数的意思是，如果不存在update的记录，是否插入objNew,true为插入，默认是false，不插入。
+
+`multi`    : mongodb默认是false,只更新找到的第一条记录，如果这个参数为true,就把按条件查出来多条记录全部更新。
+
+最后两个我们暂时不管他，用系统默认的参数，第二个参数有点复杂，我们需要去学会使用各种操作符，我们先介绍一下最简单的：`$set`
+## $set
+```
+> db.user.update(
+...     {'username':'sunpwork'},
+...     {$set : {'username':'moonkop'}}
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+> db.user.find({'username':'moonkop'}).pretty()
+{
+	"_id" : ObjectId("5a7c4d73952a7b319c682383"),
+	"username" : "moonkop",
+	"address" : [
+		{
+			"name" : "张三",
+			"tel" : "1122334455",
+			"detailedAddress" : "xx road"
+		},
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	]
+}
+```
+在上面的操作中，我们将sunpwork的用户名修改为moonkop,这是非数组字段修改，如果是修改数组元素呢，我第一想到的是讲这个数组整个重新赋值覆盖，但是这样的操作成本太高了，仔细研究了一下，原来我们是可以根据数组的索引(下标)来修改数组的值的：
+```
+> db.user.update(
+...     {'username':'moonkop'},
+...     {
+...         $set : {
+...             'address.0.tel':'000999888',
+...             'address.0.detailAddress':'cc road'   
+...         }
+...     }
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+> db.user.find({'username':'moonkop'}).pretty()
+{
+	"_id" : ObjectId("5a7c4d73952a7b319c682383"),
+	"username" : "moonkop",
+	"address" : [
+		{
+			"name" : "张三",
+			"tel" : "000999888",
+			"detailedAddress" : "xx road",
+			"detailAddress" : "cc road"
+		},
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	]
+}
+```
+
+在上面的操作中，我们对address中下标为0的值进行的修改，address.0.tel 中，0代表的是数组的索引值，tel则是数组中列的值。可以看到我们将第0个地址的电话号码和地址修改了。
+
+## $unset
+在MongoDB中提供了我们删除字段的操作，就是说可以将某一字段从这条数据中移除：`$unset`
+
+用法：`{ $unset : { field : 1} }`
+```
+> db.user.update(
+...     {'username':'moonkop'},
+...     {
+...         $unset : {
+...             'username':1
+...         }
+...     }
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7c4d73952a7b319c682383"),
+	"address" : [
+		{
+			"name" : "张三",
+			"tel" : "000999888",
+			"detailedAddress" : "xx road",
+			"detailAddress" : "cc road"
+		},
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	]
+}
+```
+这里我们将username为moonkop的字段的name字段移除了，但是我个人认为这个用法估计实际使用频率不大，毕竟很少会有人在程序员去修改自己数据库的结构。上面$set用法好像漏掉一点，若字段不存在，则添加，这里我们正好演示一下将username字段添加到数据中：
+```
+> db.user.update(
+...     {"_id" : ObjectId("5a7c4d73952a7b319c682383")},
+...     {
+...         $set : {
+...             'username':'sunpwork'
+...         }
+...     }
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7c4d73952a7b319c682383"),
+	"address" : [
+		{
+			"name" : "张三",
+			"tel" : "000999888",
+			"detailedAddress" : "xx road",
+			"detailAddress" : "cc road"
+		},
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	],
+	"username" : "sunpwork"
+}
+```
+`$unset`还有另一个用法，就是删除数组成员：
+```
+> db.user.update(
+...     {'username':'sunpwork'},
+...     {
+...         $unset : {
+...             'address.0':1
+...         }
+...     }
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7c4d73952a7b319c682383"),
+	"address" : [
+		null,
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	],
+	"username" : "sunpwork"
+}
+```
+
+## $pull
+上面我们用$unset删除了下标为0的数组元素，但是数组上的那个位置被留空了，就是原来的值变成null了，这时候我们就要讲到一个新操作符`$pull`
+
+用法：`$pull : { field : value } }`
+
+```
+> db.user.update(
+...     {'username':'sunpwork'},
+...     {
+...         $pull : {'address':null}
+...     }
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7c4d73952a7b319c682383"),
+	"address" : [
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	],
+	"username" : "sunpwork"
+}
+```
+
+其实我们上面的命令执行的含义是讲address中所有值为null的数据清除，当然，如果你讲null换成数组某个成员的值（包括name、tel、detailedAddress）你完全可以一次操作删除数组成员，但是我个人认为在项目开发中，使用下标来删除的可能性更大。
+
+## $push
+下面我们来讲一下数组成员的添加操作符：`$push`
+
+用法：`{ $push : { field : value } }`
+
+把value追加到field里面去，field一定要是数组类型才行，如果field不存在，会新增一个数组类型加进去。
+
+```
+> db.user.update(
+...     {'username':'sunpwork'},
+...     {
+...         $push : {
+...             'addressList': 
+...             {
+...     "name" : "张三",
+...     "tel" : "000999888",
+...     "detailedAddress" : "xx road",
+...     }
+...         }
+...     }
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7c5e42952a7b319c682384"),
+	"username" : "sunpwork",
+	"address" : [
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	],
+	"addressList" : [
+		{
+			"name" : "张三",
+			"tel" : "000999888",
+			"detailedAddress" : "xx road"
+		}
+	]
+}
+```
+
+上面我们用$push操作符新加了一条地址信息，但是在实际的使用过程中，我更喜欢另一个操作符：$addToSet，他和$push的使用方式一样，不同的是$addToSet只有当这个值不在数组内才增加
+
+```
+> db.user.update(
+...     {'username':'sunpwork'},
+...     {
+...         $addToSet : {
+...             'addressList': 
+...             {
+...     "name" : "张三",
+...     "tel" : "000999888",
+...     "detailedAddress" : "xx road",
+...     }
+...         }
+...     }
+... )
+WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 0 })
+> db.user.find().pretty()
+{
+	"_id" : ObjectId("5a7c5e42952a7b319c682384"),
+	"username" : "sunpwork",
+	"address" : [
+		{
+			"name" : "李四",
+			"tel" : "1144556677",
+			"detailedAddress" : "yy road"
+		}
+	],
+	"addressList" : [
+		{
+			"name" : "张三",
+			"tel" : "000999888",
+			"detailedAddress" : "xx road"
+		}
+	]
+}
+```
+更新操作暂时就讲这么多吧，以后在项目中遇到新的需求我们再补充。

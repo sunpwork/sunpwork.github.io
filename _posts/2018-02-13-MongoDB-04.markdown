@@ -1,0 +1,162 @@
+---
+layout:       post
+title:        "入坑 MongoDB 第四篇"
+subtitle:     "PHP环境配置与基本使用"
+date:         2018-02-13 19:50:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 数据库
+    - MongoDB
+    - PHP    
+---
+
+>前面几篇介绍了MongoDB的基本shell命令，今天我们讲一下如何在PHP中使用MongoDB。
+
+首先是配置安装，我这里是以PHP7为例，PHP7以下的版本安装比较麻烦，我尝试了几次都没成功，索性就放弃了。首先我们得知道自己自己PHP7的安装路径，如果是在宝塔面板中安装的php环境的话，路径应该是在/www/server/php/70下，我们用pecl(php扩展与应用库)l命令来扩展安装：
+```
+cd /www/server/php/70/bin
+pecl install mongodb
+```
+
+安装大概会持续两三分钟，执行成功后，会输出以下结果
+
+```
+Build process completed successfully
+Installing '/www/server/php/70/lib/php/extensions/no-debug-non-zts-20151012/mongodb.so'
+install ok: channel://pecl.php.net/mongodb-1.4.0
+Extension mongodb enabled in php.ini
+```
+
+这样我们把PHP服务重启一下就可以正常使用了。
+在PHP7中特别定制了MongoDB\Driver 一套对MongoDB数据库进行操作的类，首先我们先学会如何连接数据库：
+```php
+$manage = new \MongoDB\Driver\Manager('mongodb://localhost:27017');
+```
+
+Manager类的构造函数参数为连接的MongoDB的URL，mongodb在服务器重点默认端口号为27017，现在我们尝试使用Manager类中的executeCommand方法执行一些数据库操作：
+```php
+<?php
+$manage = new \MongoDB\Driver\Manager('mongodb://localhost:27017');
+
+$documents = [
+    [
+        'username' => 'phpTest',
+        'tel' => '1122334455',
+    ]
+];
+$cmdParam = [
+    "insert" => 'user',
+    "documents" => $documents,
+];
+$cmd = new \MongoDB\Driver\Command($cmdParam);
+$result = $manage->executeCommand('MongoDBTest', $cmd);
+var_dump($result->toArray());
+```
+
+这里我们要注意，插入的documents应该是一个二维数组，insert命令默认支持多条数据同时插入，若我们只插入一条数据，也需要按照数组的格式来，cmdParam参数中，insert对应的值为要操作的collection(集合)user，documents为要插入的数据，一般为数组格式。我们需要将cmdParam数组构造为Command对象，excuteCommand方法的第一个参数为数据库名MongoDBTest，第二个参数为执行的操作Command对象。
+
+执行结果如下：
+
+```php
+array(1) {
+  [0]=>
+  object(stdClass)#5 (2) {
+    ["n"]=>
+    int(1)
+    ["ok"]=>
+    float(1)
+  }
+}
+```
+
+excuteCommand方法的执行结果是Cusor，里面保存着数据线操作执行的相关信息，现在我们到使用shell命令查看刚才的数据是否正确的添加到数据库中：
+```
+> db.user.find({'username':'phpTest'}).pretty()
+{
+	"_id" : ObjectId("5a7ef113443ddb31ca381cae"),
+	"username" : "phpTest",
+	"tel" : "1122334455"
+}
+```
+下面我们来看一个修改的案例：
+```php
+<?php
+$manage = new \MongoDB\Driver\Manager('mongodb://localhost:27017');
+
+$updatesParam = [
+    [
+        'q' => ['username' => 'phpTest'],
+        'u' => ['$set' =>
+            ['tel' => '5544332211'],
+        ],
+    ]
+];
+$cmdParam = [
+    "update" => 'user',
+    "updates" => $updatesParam,
+];
+$cmd = new \MongoDB\Driver\Command($cmdParam);
+$result = $manage->executeCommand('MongoDBTest', $cmd);
+var_dump($result->toArray());
+```
+大体结构与insert相同，cmdParam中将数组第一个值的key换成update，对应的value依旧为collection(集合)名，updates与inserts中的documents相识，因为是可以一次执行多个更新操作，所以updates中可以包含多个更新条件以及对应的操作，updatesParam中，q表示更新的条件，u表示执行的更新操作，下面我们使用shell命令查看结果：
+```
+> db.user.find({'username':'phpTest'}).pretty()
+{
+	"_id" : ObjectId("5a7ef113443ddb31ca381cae"),
+	"username" : "phpTest",
+	"tel" : "5544332211"
+}
+```
+接下来我们再来看一个删除的案例：
+```php
+<?php
+$manage = new \MongoDB\Driver\Manager('mongodb://localhost:27017');
+
+$deletesParam = [
+    [
+        'q' => ['username' => 'phpTest'],
+        "limit" => 1,
+    ]
+];
+$cmdParam = [
+    "delete" => 'user',
+    "deletes" => $deletesParam,
+];
+$cmd = new \MongoDB\Driver\Command($cmdParam);
+$result = $manage->executeCommand('MongoDBTest', $cmd);
+var_dump($result->toArray());
+```
+delete与上面的操作基本相似，不同的是cmdParam数组的第二个值的key变为了limit，limit的用法很简单，若limit为1，限制删除的数量，只删除符合条件的第一条数据，若limit为0，删除所有符合条件的数据。
+
+下面是查询的案例：
+```php
+<?php
+$manage = new \MongoDB\Driver\Manager('mongodb://localhost:27017');
+
+$filter = [
+    'username' => 'phpTest',
+];
+$query = new \MongoDB\Driver\Query($filter);
+$result = $manage->executeQuery('MongoDBTest.user',$query);
+var_dump($result->toArray());
+```
+其实executeCommand方法好像也可以执行查询操作的，但是调试了大半天都没通，看了下文档找到了Manager的另一个方法excuseQuery，顾名思义，这个方法就是要来查询数据的，$filter参数为查询的条件，但是不包含在哪张collection(集合)中查询数据，我们上面就直接写了username=’PHPTest’，但是excuteQuery的第一个参数是数据库+数据表，这里是从MongoDBTest数据库当中的user表查询数据，结果如下：
+```
+array(1) {
+  [0]=>
+  object(stdClass)#6 (3) {
+    ["_id"]=>
+    object(MongoDB\BSON\ObjectId)#5 (1) {
+      ["oid"]=>
+      string(24) "5a7eff32443ddb31ca381cd5"
+    }
+    ["username"]=>
+    string(7) "phpTest"
+    ["tel"]=>
+    string(10) "1122334455"
+  }
+}
+```
