@@ -112,3 +112,8 @@ mybatis如何配置我这里就不多说了，如果我们使用`mybatis-config.
 ```
 在执行查询语句之前，我们先调用`PageHelper.startPage(pageNum,pageSize)`来进行分页约束，`pageNum`表示当前页数，`pageSize`表示每页显示的数量,然后我们使用逆向工程生成的方法查询所有的记录，最后我们使用`PageInfo.of()`来获取分页的结果，我们在监视窗口中看一下结果。
 ![](/img/in-post/post-pageHelper/pageHelper01.jpg)
+
+`pageNum`和`pageSize`是我们传入的参数，`size`是获取到`list`的大小，`total`为数据库中数据的总数量，`list`是分页查询到的数据列表。
+
+有的前端分页插件发送给我们的数据是`start`和`length`，`start`表示偏移量，`startPage`这个方法需要的参数为`pageNum`，表示当前页数，所以`PageHelper`给我们提供了另外一种方法`offsetPage(int offset, int limit)`，用法和`startPage`是一样的。除此之外，`PageHelper`还支持排序：`setOrderBy(String orderBy)`，这里这个String的格式为`column_name desc/asc`.
+以上大致就是PageHelper的简单使用了。
