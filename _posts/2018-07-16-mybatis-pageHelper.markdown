@@ -4,10 +4,8 @@ title:        "mybatis pageHelper上手"
 subtitle:     "dataTables分页后端"
 date:         2018-07-16 20:52:00
 author:       "sunpwork"
-header-img:   "img/in-post/post-eleme-pwa/eleme-at-io.jpg"
 header-mask:  0.3
 catalog:      true
-multilingual: true
 tags:
     - 后端开发
     - Java
