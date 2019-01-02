@@ -67,13 +67,16 @@ $greet('PHP');
 $message = 'hello';
 
 // 没有 "use"
+
 $example = function () {
     var_dump($message);
     //会提示错误:undefine varibale
+
 };
 echo $example();
 
 // 继承 $message
+
 $example = function () use ($message) {
     var_dump($message);
 };
@@ -81,17 +84,23 @@ echo $example();
 //输出hello
 
 // Inherited variable's value is from when the function is defined, not when called
+
 // 继承的变量值是从函数定义开始的而不是函数调用开始。
+
 $message = 'world';
 echo $example();
 //依旧输出hello
 
 // Reset message
+
 // 重置 message 变量
+
 $message = 'hello';
 
 // Inherit by-reference
+
 // 使用 引用 继承
+
 $example = function () use (&$message) {
     var_dump($message);
 };
@@ -100,13 +109,16 @@ echo $example();
 
 // The changed value in the parent scope
 // is reflected inside the function call
+
 $message = 'world';
 echo $example();
 // 由于函数继承的是变量的应用，所以当变量值修改，
 // 继承的变量也会修改，此处输出world
 
 // Closures can also accept regular arguments
+
 // 闭包函数也可以接受参数 
+
 $example = function ($arg) use ($message) {
     var_dump($arg . ' ' . $message);
 };
@@ -123,6 +135,7 @@ Inheriting variables from the parent scope is not the same as using global varia
 // 一个基本的购物车，包括一些已经添加的商品和每种商品的数量。
 // 其中有一个方法用来计算购物车中所有商品的总价格，该方法使
 // 用了一个 closure 作为回调函数。
+
 class Cart
 {
     const PRICE_BUTTER  = 1.00;
@@ -156,21 +169,26 @@ class Cart
         
         array_walk($this->products, $callback);
         // 使用自定义函数对数组中的每个元素做回调处理
+
         return round($total, 2);
         // 四舍五入保留两位小数
+
     }
 }
 
 $my_cart = new Cart;
 
 // 往购物车里添加条目
+
 $my_cart->add('butter', 1);
 $my_cart->add('milk', 3);
 $my_cart->add('eggs', 6);
 
 // 打出出总价格，其中有 5% 的销售税.
+
 print $my_cart->getTotal(0.05) . "\n";
 // 最后结果是 54.29
+
 ```
 这里我们简单介绍一下`array_walk`这个函数
 ``` php
