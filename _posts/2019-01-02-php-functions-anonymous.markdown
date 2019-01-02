@@ -108,11 +108,13 @@ echo $example();
 //输出hello
 
 // The changed value in the parent scope
+
 // is reflected inside the function call
 
 $message = 'world';
 echo $example();
 // 由于函数继承的是变量的应用，所以当变量值修改，
+
 // 继承的变量也会修改，此处输出world
 
 // Closures can also accept regular arguments
@@ -133,7 +135,9 @@ Inheriting variables from the parent scope is not the same as using global varia
 ``` php
 <?php
 // 一个基本的购物车，包括一些已经添加的商品和每种商品的数量。
+
 // 其中有一个方法用来计算购物车中所有商品的总价格，该方法使
+
 // 用了一个 closure 作为回调函数。
 
 class Cart
