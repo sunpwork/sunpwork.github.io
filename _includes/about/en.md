@@ -1,4 +1,4 @@
-
+<!-- 
 
 > Yet another man.
 
@@ -30,6 +30,6 @@ I studied Digital Media Art and graduated from [Communication University of Chin
 [6]: https://yanshuo.io/assets/player/?deck=58ac8598b123db0067292f92 "PWA Rehashing"
 [7]: https://yanshuo.io/assets/player/?deck=593ad6fbfe88c2006a0a0d6d "The State of PWA"
 [8]: https://yanshuo.io/assets/player/?deck=594d673d570c357d0698a950 "Building PWA"
-[9]: //huangxuan.me/jsconfcn2017/
+[9]: //huangxuan.me/jsconfcn2017/ -->
 
 
