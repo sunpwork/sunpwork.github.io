@@ -14,7 +14,7 @@ tags:
     - 代码复用
 ---
 
->自PHP 5.4起，PHP实现了一种代码复用的方法，称为trait
+>自PHP 5.4起，PHP实现了一种代码复用的方法，称为trait。（本章节案例内容来源 [PHP官方文档](http://php.net/manual/zh/language.oop5.traits.php)）
 
 # 简介
 
