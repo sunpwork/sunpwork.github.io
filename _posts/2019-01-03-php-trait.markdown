@@ -2,7 +2,7 @@
 layout:       post
 title:        "浅析PHP Trait用法"
 subtitle:     ""
-date:         2019-01-02 14:44:00
+date:         2019-01-03 19:20:00
 author:       "sunpwork"
 header-mask:  0.3
 catalog:      true
