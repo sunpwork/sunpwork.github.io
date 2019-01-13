@@ -27,12 +27,14 @@ tags:
 class SimpleClass
 {
    // 错误的属性声明
+
    public $var1 = 'hello ' . 'world';
    public $var3 = 1+2;
    public $var4 = self::myStaticMethod();
    public $var5 = $myVar;
 
    // 正确的属性声明
+
    public $var6 = 'constant';
    public $var7 = array(true, false);
 }
@@ -84,6 +86,7 @@ class MyClass
     function printHello()
     {
         //类内可以访问所有的成员
+
         echo $this->public;
         echo $this->protected;
         echo $this->private;
@@ -92,8 +95,11 @@ class MyClass
 
 $obj = new MyClass();
 echo $obj->public; // 这行能被正常执行
+
 echo $obj->protected; // 这行会产生一个致命错误(类外不能访问受保护的成员)
+
 echo $obj->private; // 这行也会产生一个致命错误(类外不能访问私有成员)
+
 $obj->printHello(); // 输出 Public、Protected 和 Private
 
 
@@ -115,8 +121,11 @@ class MyClass2 extends MyClass
 
 $obj2 = new MyClass2();
 echo $obj2->public; // 这行能被正常执行
+
 echo $obj2->private; // 未定义 private(注意是未定义，不是不能访问)
+
 echo $obj2->protected; // 这行会产生一个致命错误(类外不能访问受保护的成员)
+
 $obj2->printHello(); // 输出 Public、Protected2 和 Undefined
 ```
 
@@ -130,18 +139,23 @@ $obj2->printHello(); // 输出 Public、Protected2 和 Undefined
 class MyClass
 {
     // 声明一个公有的构造函数
+
     public function __construct() { }
 
     // 声明一个公有的方法
+
     public function MyPublic() { }
 
     // 声明一个受保护的方法
+
     protected function MyProtected() { }
 
     // 声明一个私有的方法
+
     private function MyPrivate() { }
 
     // 此方法为公有
+
     function Foo()
     {
         $this->MyPublic();
@@ -152,8 +166,11 @@ class MyClass
 
 $myclass = new MyClass;
 $myclass->MyPublic(); // 这行能被正常执行
+
 $myclass->MyProtected(); // 这行会产生一个致命错误
+
 $myclass->MyPrivate(); // 这行会产生一个致命错误
+
 $myclass->Foo(); // 公有，受保护，私有都可以执行
 
 
@@ -167,12 +184,14 @@ class MyClass2 extends MyClass
     {
         $this->MyPublic();
         $this->MyProtected();// protected方法可以在子类中访问
+
         $this->MyPrivate(); // 这行会产生一个致命错误
     }
 }
 
 $myclass2 = new MyClass2;
 $myclass2->MyPublic(); // 这行能被正常执行
+
 $myclass2->Foo2(); // 公有的和受保护的都可执行，但私有的不行
 
 class Bar 
@@ -231,12 +250,14 @@ class Test
         // We can change the private property:
         
         //我们可以更改private属性
+
         $other->foo = 'hello';
         var_dump($other->foo);
 
         // We can also call the private method:
 
         //我们可以调用private方法
+
         $other->bar();
     }
 }
@@ -276,8 +297,11 @@ class bar extends foo
 $foo = new foo();
 $bar = new bar();
 $foo->printItem('baz'); // Output: 'Foo: baz'
+
 $foo->printPHP();       // Output: 'PHP is great' 
+
 $bar->printItem('baz'); // Output: 'Bar: baz' bar重写了foo类的printItem方法
+
 $bar->printPHP();       // Output: 'PHP is great' bar继承了foo类的printItem方法
 ```
 
@@ -309,6 +333,7 @@ print Foo::$my_static . "\n"; // 访问Foo类的静态属性$my_static
 
 $foo = new Foo();
 print $foo->staticValue() . "\n";// 在方法中访问类静态属性
+
 print $foo->my_static . "\n";      // Undefined "Property" my_static 静态属性不可以由对象通过->操作符在访问
 
 print $foo::$my_static . "\n";
@@ -316,6 +341,7 @@ $classname = 'Foo';
 print $classname::$my_static . "\n"; // As of PHP 5.3.0
 
 print Bar::$my_static . "\n";// 静态属性被子类继承
+
 $bar = new Bar();
 print $bar->fooStatic() . "\n";// 在子类方法中方法父类静态属性
 ```
@@ -325,7 +351,7 @@ print $bar->fooStatic() . "\n";// 在子类方法中方法父类静态属性
 <?php
 class Foo {
     public static function aStaticMethod() {
-        // ...
+        print 'call a static method';
     }
 }
 
