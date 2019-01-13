@@ -1,0 +1,337 @@
+---
+layout:       post
+title:        "浅析PHP 面向对象 第一篇"
+subtitle:     ""
+date:         2019-01-12 15:25:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 语法基础
+    - PHP
+    - OOP
+    - 面向对象
+    - 属性
+    - 访问控制
+    - Static
+---
+
+>OOP，面向对象编程是许多面向对象语言的特性，PHP作为最流行的web开发语言，其面向对象的特性除了和其他语言一样的：属性、类常量、访问控制（可见性）、对象继承、抽象类、对象接口……，同时还加入了Trait（我们在[之前的博客中](https://sunpwork.github.io/2019/01/03/php-trait/)介绍过的）这样的新特性，下面我们就简单的来了解一下PHP面向对象的基本概念（本章节案例内容来源 [PHP官方文档](http://php.net/manual/zh/language.oop5.php)）。
+
+# 属性与访问控制
+类的变量成员叫做“属性”，或者叫“字段”、“特征”。属性声明是有关键字public、protected或者private开头，然后跟一个普通的变量声明来组成。属性中的变量可以初始化，但是初始化的值必须是常数。
+
+## 属性声明案例
+``` php
+<?php
+class SimpleClass
+{
+   // 错误的属性声明
+   public $var1 = 'hello ' . 'world';
+   public $var3 = 1+2;
+   public $var4 = self::myStaticMethod();
+   public $var5 = $myVar;
+
+   // 正确的属性声明
+   public $var6 = 'constant';
+   public $var7 = array(true, false);
+}
+```
+
+## 类常量
+可以把在类中实在保持不变的值定义为常量。在定义和使用常量的时候不需要使用`$`符号。常量必须是一个定值，不能是变量，类属性，数学运算的结果或者是函数调用（这和类的属性初始化一样）。
+``` php
+<?php
+class MyClass
+{
+    const constant = 'constant value';
+
+    function showConstant() {
+        echo  self::constant . "\n";
+    }
+}
+
+echo MyClass::constant . "\n";
+
+$classname = "MyClass";
+echo $classname::constant . "\n"; // 自 5.3.0 起
+
+$class = new MyClass();
+$class->showConstant();
+
+echo $class::constant."\n"; // 自 PHP 5.3.0 起
+```
+
+在类的成员方法里面，可以用`->`（对象运算符）这种方式来访问非静态对象。静态属性则是使用`::`来访问。当一个方法在类定义内部被调用时，有一个可用的伪变量`$this`，它是一个到主对象的引用（通常是该方法所从属的对象，但如果是从第二个对象静态调用时也可能是另一个对象）。
+
+## 范围解析操作符
+上面我们用到了`::`范围解析操作符，它可以用于访问类常量，静态成员（后面会讲），还可以用于覆盖类中的属性和方法，若在在类定义之外使用这些项目，要使用类名，当然也可以通过类的变量来引用类（如上例所示）
+
+## 访问控制（可见性）
+对属性或方法的访问控制，是通过在前面添加关键字public（公有），protected（受保护）或private（私有）来实现的。被定义为公有的类成员可用在任何地方被访问；被定义为受保护的类成员可以被自身以及其子类和父类方法访问。被定义为私有的类成员则只能被其定义所在的类访问。
+
+``` php
+<?php
+/**
+ * Define MyClass
+ */
+class MyClass
+{
+    public $public = 'Public';
+    protected $protected = 'Protected';
+    private $private = 'Private';
+
+    function printHello()
+    {
+        //类内可以访问所有的成员
+        echo $this->public;
+        echo $this->protected;
+        echo $this->private;
+    }
+}
+
+$obj = new MyClass();
+echo $obj->public; // 这行能被正常执行
+echo $obj->protected; // 这行会产生一个致命错误(类外不能访问受保护的成员)
+echo $obj->private; // 这行也会产生一个致命错误(类外不能访问私有成员)
+$obj->printHello(); // 输出 Public、Protected 和 Private
+
+
+/**
+ * Define MyClass2
+ */
+class MyClass2 extends MyClass
+{
+    // 可以对 public 和 protected 进行重定义，但 private 而不能
+    protected $protected = 'Protected2';
+
+    function printHello()
+    {
+        echo $this->public;
+        echo $this->protected;
+        echo $this->private;
+    }
+}
+
+$obj2 = new MyClass2();
+echo $obj2->public; // 这行能被正常执行
+echo $obj2->private; // 未定义 private(注意是未定义，不是不能访问)
+echo $obj2->protected; // 这行会产生一个致命错误(类外不能访问受保护的成员)
+$obj2->printHello(); // 输出 Public、Protected2 和 Undefined
+```
+
+## 方法的访问控制
+类中的方法可以被定义为公有，私有或受保护。如果没有设置这些关键字，则该方法默认为公有。
+```php
+<?php
+/**
+ * Define MyClass
+ */
+class MyClass
+{
+    // 声明一个公有的构造函数
+    public function __construct() { }
+
+    // 声明一个公有的方法
+    public function MyPublic() { }
+
+    // 声明一个受保护的方法
+    protected function MyProtected() { }
+
+    // 声明一个私有的方法
+    private function MyPrivate() { }
+
+    // 此方法为公有
+    function Foo()
+    {
+        $this->MyPublic();
+        $this->MyProtected();
+        $this->MyPrivate();
+    }
+}
+
+$myclass = new MyClass;
+$myclass->MyPublic(); // 这行能被正常执行
+$myclass->MyProtected(); // 这行会产生一个致命错误
+$myclass->MyPrivate(); // 这行会产生一个致命错误
+$myclass->Foo(); // 公有，受保护，私有都可以执行
+
+
+/**
+ * Define MyClass2
+ */
+class MyClass2 extends MyClass
+{
+    // 此方法为公有
+    function Foo2()
+    {
+        $this->MyPublic();
+        $this->MyProtected();// protected方法可以在子类中访问
+        $this->MyPrivate(); // 这行会产生一个致命错误
+    }
+}
+
+$myclass2 = new MyClass2;
+$myclass2->MyPublic(); // 这行能被正常执行
+$myclass2->Foo2(); // 公有的和受保护的都可执行，但私有的不行
+
+class Bar 
+{
+    public function test() {
+        $this->testPrivate();
+        $this->testPublic();
+    }
+
+    public function testPublic() {
+        echo "Bar::testPublic\n";
+    }
+    
+    private function testPrivate() {
+        echo "Bar::testPrivate\n";
+    }
+}
+
+class Foo extends Bar 
+{
+    public function testPublic() {
+        echo "Foo::testPublic\n";
+    }
+    
+    private function testPrivate() {
+        echo "Foo::testPrivate\n";
+    }
+}
+
+$myFoo = new foo();
+$myFoo->test(); // Bar::testPrivate private方法不能被子类重写
+
+                // Foo::testPublic  public方法被子类重写
+```
+
+## 其他对象的访问控制
+同一个类的对象即使不是同一个实例也可以互相访问对方的私有与受保护成员。这是由于在这些对象的内部具体实现的细节都是已知的。
+``` php
+<?php
+class Test
+{
+    private $foo;
+
+    public function __construct($foo)
+    {
+        $this->foo = $foo;
+    }
+
+    private function bar()
+    {
+        echo 'Accessed the private method.';
+    }
+
+    public function baz(Test $other)
+    {
+        // We can change the private property:
+        
+        //我们可以更改private属性
+        $other->foo = 'hello';
+        var_dump($other->foo);
+
+        // We can also call the private method:
+
+        //我们可以调用private方法
+        $other->bar();
+    }
+}
+
+$test = new Test('test');
+
+$test->baz(new Test('other'));
+```
+
+# 对象继承
+继承是大家熟知的一个程序设计特性，PHP的对象模型也使用了继承。继承将会影响到类与类，对象与对象之间的关系。比如，当扩展一个类，子类就会继承父类所有的公有的和受保护的方法。除非子类覆盖了父类的方法，被继承的方法都会保留其原有功能。
+## 继承示例
+``` php
+<?php
+
+class foo
+{
+    public function printItem($string) 
+    {
+        echo 'Foo: ' . $string . PHP_EOL;
+    }
+    
+    public function printPHP()
+    {
+        echo 'PHP is great.' . PHP_EOL;
+    }
+}
+
+class bar extends foo
+{
+    public function printItem($string)
+    {
+        echo 'Bar: ' . $string . PHP_EOL;
+    }
+}
+
+$foo = new foo();
+$bar = new bar();
+$foo->printItem('baz'); // Output: 'Foo: baz'
+$foo->printPHP();       // Output: 'PHP is great' 
+$bar->printItem('baz'); // Output: 'Bar: baz' bar重写了foo类的printItem方法
+$bar->printPHP();       // Output: 'PHP is great' bar继承了foo类的printItem方法
+```
+
+# Static (静态)关键字
+声明类属性或方法为静态，就可以不实例化类而直接访问。静态属性不能通过一个类已实例化的对象来方法(静态方法可以)。同样静态属性和方法也有访问控制，如果没有指定默认为公有。由于静态方法不需要通过对象即可调用，所以伪变量`$this`在静态方法中不可用。静态属性不可以由对象通过->操作符在访问。
+
+静态属性只能被初始化为文字或常量，不能使用表达式。所以可以把静态属性初始化为整数或数组，但不能初始化为另一个变量或函数返回值，也不能指向一个对象。
+## 静态属性实例
+``` php
+<?php
+class Foo
+{
+    public static $my_static = 'foo';
+
+    public function staticValue() {
+        return self::$my_static;
+    }
+}
+
+class Bar extends Foo
+{
+    public function fooStatic() {
+        return parent::$my_static;
+    }
+}
+
+
+print Foo::$my_static . "\n"; // 访问Foo类的静态属性$my_static
+
+$foo = new Foo();
+print $foo->staticValue() . "\n";// 在方法中访问类静态属性
+print $foo->my_static . "\n";      // Undefined "Property" my_static 静态属性不可以由对象通过->操作符在访问
+
+print $foo::$my_static . "\n";
+$classname = 'Foo';
+print $classname::$my_static . "\n"; // As of PHP 5.3.0
+
+print Bar::$my_static . "\n";// 静态属性被子类继承
+$bar = new Bar();
+print $bar->fooStatic() . "\n";// 在子类方法中方法父类静态属性
+```
+
+## 静态方法示例
+``` php
+<?php
+class Foo {
+    public static function aStaticMethod() {
+        // ...
+    }
+}
+
+Foo::aStaticMethod();
+$classname = 'Foo';
+$classname::aStaticMethod(); // 自 PHP 5.3.0 起
+$foo = new Foo();
+$foo->aStaticMethod();
+```
