@@ -1,0 +1,504 @@
+---
+layout:       post
+title:        "浅析PHP 面向对象 第二篇"
+subtitle:     ""
+date:         2019-01-12 15:25:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 语法基础
+    - PHP
+    - OOP
+    - 面向对象
+    - 抽象类
+    - 对象接口
+    - 匿名类
+    - 重载
+    - 遍历对象
+    - 魔术方法
+    - Final 关键字
+---
+>在[浅析PHP 面向对象 第一篇](https://sunpwork.github.io/2019/01/12/php-oop-01/)中我们简单的介绍了PHP中的面向对象特性（属性、类常量、访问控制、对象继承、static关键字……），下面我们继续来了解PHP面向对象的以下特性：抽象类、对象接口、匿名类、重载、遍历对象、魔术方法、FInal 关键字（本章节案例内容来源 [PHP官方文档](http://php.net/manual/zh/language.oop5.php)）。
+
+# 抽象类
+PHP支持抽象类和抽象方法。定义为抽象的类不能被实例化。任何一个类，如果它里面至少有一个方法是被声明为抽象的，那么这个类就必须被声明为抽象类。被定义为抽象的方法只是声明了其调用方式（参数），不能定义其具体的功能实现。
+
+继承一个抽象类的时候，子类必须定义父类的所有抽象方法；另外，这些方法的访问控制必须和父类中一样（或者更为宽松）。例如某个抽象方法被声明为受保护的，那么子类中实现的方法就应该声明为受保护的或者公有的，而不能定义为私有的。此外方法的调用方式必须匹配，即类型和所需参数数量必须一致，例如，子类定义了一个可选参数，而父类抽象方法的声明中没有，两者的声明并无冲突。
+
+## 抽象类示例1
+``` php
+<?php
+abstract class AbstractClass
+{
+    // 强制要求子类定义这些方法
+
+    abstract protected function getValue();
+    abstract protected function prefixValue($prefix);
+
+    // 普通方法（非抽象方法）
+    public function printOut() {
+        print $this->getValue() . "\n";
+    }
+}
+
+class ConcreteClass1 extends AbstractClass
+{
+    protected function getValue() {
+        return "ConcreteClass1";
+    }
+
+    public function prefixValue($prefix) {
+        return "{$prefix}ConcreteClass1";
+    }
+}
+
+class ConcreteClass2 extends AbstractClass
+{
+    public function getValue() {
+        return "ConcreteClass2";
+    }
+
+    public function prefixValue($prefix) {
+        return "{$prefix}ConcreteClass2";
+    }
+}
+
+$class1 = new ConcreteClass1;
+$class1->printOut();
+echo $class1->prefixValue('FOO_') ."\n";
+
+$class2 = new ConcreteClass2;
+$class2->printOut();
+echo $class2->prefixValue('FOO_') ."\n";
+```
+
+本例中`ConcreteClass1`和`ConcreteClass2`分别继承了`AbstractClass`这个抽象类，并在本类中定义了所有抽象方法的实现。以上例程输出结果：
+```
+ConcreteClass1
+FOO_ConcreteClass1
+ConcreteClass2
+FOO_ConcreteClass2
+```
+
+## 抽象类示例2
+``` php
+<?php
+abstract class AbstractClass
+{
+    // 我们的抽象方法仅需要定义需要的参数
+    abstract protected function prefixName($name);
+
+}
+
+class ConcreteClass extends AbstractClass
+{
+
+    // 我们的子类可以定义父类签名中不存在的可选参数
+
+    public function prefixName($name, $separator = ".") {
+        if ($name == "Pacman") {
+            $prefix = "Mr";
+        } elseif ($name == "Pacwoman") {
+            $prefix = "Mrs";
+        } else {
+            $prefix = "";
+        }
+        return "{$prefix}{$separator} {$name}";
+    }
+}
+
+$class = new ConcreteClass;
+echo $class->prefixName("Pacman"), "\n";
+echo $class->prefixName("Pacwoman"), "\n";
+```
+本例中，`ConcreteClass`类中定义父类的抽象方法`prefixName`时，加入了可选参数`operator`，两者声明并无冲突。以上例程会输出：
+```
+Mr. Pacman
+Mrs. Pacwoman
+```
+
+# 匿名类
+PHP 7开始支持匿名类。匿名类很有用，可以创建一次性的简单对象。
+```php
+<?php
+
+// PHP 7 之前的代码
+class Logger
+{
+    public function log($msg)
+    {
+        echo $msg;
+    }
+}
+
+$util->setLogger(new Logger());
+
+// 使用了 PHP 7+ 后的代码
+$util->setLogger(new class {
+    public function log($msg)
+    {
+        echo $msg;
+    }
+});
+```
+可以传递参数到匿名类的构造器，也可以继承(extend)其他类、实现接口(implement interface)，以及像其他普通的类一样使用trait：
+``` php
+<?php
+
+class SomeClass {}
+interface SomeInterface {}
+trait SomeTrait {}
+
+var_dump(new class(10) extends SomeClass implements SomeInterface {
+    private $num;
+
+    public function __construct($num)
+    {
+        $this->num = $num;
+    }
+
+    use SomeTrait;
+});
+```
+
+匿名类被嵌套进普通Class后，不能方法这个外部类(Outer class)的private、protected 方法或属性。为了访问外部类的protected属性或方法，匿名类可以extend此外部类。如果要访问外部类的private属性，必须通过构造器传进来：
+``` php
+<?php
+
+class Outer
+{
+    private $prop = 1;
+    protected $prop2 = 2;
+
+    protected function func1()
+    {
+        return 3;
+    }
+
+    public function func2()
+    {
+        return new class($this->prop) extends Outer {
+            private $prop3;
+
+            public function __construct($prop)
+            {
+                $this->prop3 = $prop;
+            }
+
+            public function func3()
+            {
+                return $this->prop2 + $this->prop3 + $this->func1();
+            }
+        };
+    }
+}
+
+echo (new Outer)->func2()->func3();
+```
+本例中，我们将`Outer`类的private属性`$prop`通过匿名类的构造器传入，由于匿名类extend`Outer`这个外部类，所以我们可以在匿名类内访问`Outer`的protected属性`$prop2`。
+
+# 重载
+在其他语言中(C++、Java 等)，重载是用于提供多个同名的类方法，但各方法的参数类型或个数不同。PHP所提供的重载是指动态地“创建”类的属性和方法。我们通过魔术方法(magic methods)来实现的。
+
+当调用当前环境下未定义或不可见的类属性或方法时，重载方法会被调用。注意，所有的重载方法都必须被声明为public。
+
+``` php
+public __set ( string $name , mixed $value ) : void
+```
+在给不可访问属性赋值时,`__set()`会被调用。
+``` php
+public __get ( string $name ) : mixed
+```
+读取不可访问属性时，`__get()`会被调用。
+``` php
+public __isset ( string $name ) : bool
+```
+当对不可访问属性调用`isset()`或`empty()`时，`__isset()`会被调用。
+``` php
+public __unset ( string $name ) : void
+```
+当对不可访问属性调用`unset`时，`__unset()`会被调用。
+
+参数`$name`是指要操作的变量名称。__set() 方法的`$value`参数指定了`$name`变量的值。
+
+属性重载只能在对象中进行。在静态方法中，这些魔术方法将不能被调用。所以这些方法都不能被声明为`static`。
+
+## 使用`__get()`，`__set()`，`__isset()`和`__unset()`进行属性重载
+
+``` php
+<?php
+class PropertyTest {
+     /**  被重载的数据保存在此  */
+    private $data = array();
+
+ 
+     /**  重载不能被用在已经定义的属性  */
+    public $declared = 1;
+
+     /**  只有从类外部访问这个属性时，重载才会发生 */
+    private $hidden = 2;
+
+    public function __set($name, $value) 
+    {
+        echo "Setting '$name' to '$value'\n";
+        $this->data[$name] = $value;
+    }
+
+    public function __get($name) 
+    {
+        echo "Getting '$name'\n";
+        if (array_key_exists($name, $this->data)) {
+            return $this->data[$name];
+        }
+
+        $trace = debug_backtrace();
+        trigger_error(
+            'Undefined property via __get(): ' . $name .
+            ' in ' . $trace[0]['file'] .
+            ' on line ' . $trace[0]['line'],
+            E_USER_NOTICE);
+        return null;
+    }
+
+    /**  PHP 5.1.0之后版本 */
+    public function __isset($name) 
+    {
+        echo "Is '$name' set?\n";
+        return isset($this->data[$name]);
+    }
+
+    /**  PHP 5.1.0之后版本 */
+    public function __unset($name) 
+    {
+        echo "Unsetting '$name'\n";
+        unset($this->data[$name]);
+    }
+
+    /**  非魔术方法  */
+    public function getHidden() 
+    {
+        return $this->hidden;
+    }
+}
+
+
+echo "<pre>\n";
+
+$obj = new PropertyTest;
+
+$obj->a = 1;// 对不可访问属性赋值会调用 __set() 方法
+echo $obj->a . "\n\n";// 访问不可访问属性会调用 __get() 方法
+
+var_dump(isset($obj->a));// 对不可访问属性isset()时会调用 __isset() 方法
+unset($obj->a);// 对不可方法属性unpset()时会调用 __unset() 方法
+var_dump(isset($obj->a));// unset() 之后属性会从array数组中释放
+echo "\n";
+
+echo $obj->declared . "\n\n";// 对于已定义的可方法属性不会调用重载
+
+echo "Let's experiment with the private property named 'hidden':\n";
+echo "Privates are visible inside the class, so __get() not used...\n";
+echo $obj->getHidden() . "\n";// 只有从类外部访问不可访问属性，重载才会发生
+echo "Privates not visible outside of class, so __get() is used...\n";
+echo $obj->hidden . "\n";// 对 $hidden 属性进行重载
+```
+
+本例中，我们在`PropertyTest`类中定义了一个`$data`数组来存放被重载的数据，然后分别使用`__get()`,`__set()`,`__isset()`和`__unset()`来进行属性重载。
+
+# 遍历对象
+PHP中，通过foreach语句默认情况下可以遍历所有可见属性。
+## 简单的对象遍历
+``` php
+<?php
+class MyClass
+{
+    public $var1 = 'value 1';
+    public $var2 = 'value 2';
+    public $var3 = 'value 3';
+
+    protected $protected = 'protected var';
+    private   $private   = 'private var';
+
+    function iterateVisible() {
+       echo "MyClass::iterateVisible:\n";
+       foreach($this as $key => $value) {
+           print "$key => $value\n";
+       }
+    }
+}
+
+$class = new MyClass();
+
+foreach($class as $key => $value) {
+    print "$key => $value\n";
+}
+//使用foreach默认遍历所有可见属性(类外访问为public属性)
+
+echo "\n";
+
+
+$class->iterateVisible();//在类内foreach遍历的可见属性包含 public、protected、private
+```
+以上例程会输出：
+```
+var1 => value 1
+var2 => value 2
+var3 => value 3
+
+MyClass::iterateVisible:
+var1 => value 1
+var2 => value 2
+var3 => value 3
+protected => protected var
+private => private var
+```
+
+## 实现iterator接口的对象遍历
+我们可以在类中实现`Iterator`接口，让对象自行决定如何遍历以及每次遍历时哪些值可用。
+
+### 接口摘要
+``` php
+Iterator extends Traversable {
+    /* 方法 */
+    abstract public current ( void ) : mixed // 返回当前元素
+    abstract public key ( void ) : scalar// 返回当前元素的键
+    abstract public next ( void ) : void// 向前移动到下一个元素
+    abstract public rewind ( void ) : void// 返回到迭代器的第一个元素
+    abstract public valid ( void ) : bool// 检查当前位置是否有效
+}
+```
+
+
+```php
+<?php
+class MyIterator implements Iterator
+{
+    private $var = array(); //存放数据的数组
+
+    public function __construct($array)
+    {
+        if (is_array($array)) {
+            $this->var = $array;
+        }
+    }
+
+    public function rewind() {
+        echo "rewinding\n";
+        reset($this->var);// reset 将数组的内部指针指向第一个单元
+    }
+
+    public function current() {
+        $var = current($this->var);// current 返回数组中的当前单元
+        echo "current: $var\n";
+        return $var;
+    }
+
+    public function key() {
+        $var = key($this->var);
+        echo "key: $var\n";// key 返回数组中当前单元的键名
+        return $var;
+    }
+
+    public function next() {
+        $var = next($this->var);// next 将数组内部指针向前移动一位并返回下一个单元的值
+        echo "next: $var\n";
+        return $var;
+    }
+
+    public function valid() {
+        $var = $this->current() !== false; // 判断当前单元是否有效
+        echo "valid: {$var}\n";
+        return $var;
+    }
+}
+
+$values = array(1,2,3);
+$it = new MyIterator($values);
+
+foreach ($it as $a => $b) {
+    print "$a: $b\n";
+}
+```
+在实现了`Iterator`接口之后，使用`foreach`遍历对象时，首先会调用`rewind()`方法将数组内部指针指向第一个元素，然后会依次调用`current()`方法返回当前单元的值，调用`valid()`方法判断当前单元是否有效，若有效会继续调用`key()`方法返回数组当前单元的键名，在这过程中`key()`和`current()`方法的返回值会被赋给`foreach`中的`$key`和`$value`，也就是本例中的`a`和`b`。最后会执行`next()`方法，然后重复执行以上操作，直至`current()`判断当前单元无效。上例输出结果：
+```
+rewinding
+current: 1
+valid: 1
+current: 1
+key: 0
+0: 1
+next: 2
+current: 2
+valid: 1
+current: 2
+key: 1
+1: 2
+next: 3
+current: 3
+valid: 1
+current: 3
+key: 2
+2: 3
+next:
+current:
+valid:
+```
+
+## 通过实现 IteratorAggregate 来遍历对象
+在实现`MyIterator`迭代器的基础上，我们可以使用`IteratorAggregate`接口以替代实现所有的`Iterator`方法。`IteratorAggregate`只需要实现一个方法`IteratorAggregate::getIterator()`,其应该返回一个实现了`Iterator`的类的实例。
+``` php
+<?php
+class MyCollection implements IteratorAggregate
+{
+    private $items = array();
+    private $count = 0;
+
+    // Required definition of interface IteratorAggregate
+
+    // 实现IteratorAggregate接口的方法
+    public function getIterator() {
+        return new MyIterator($this->items);//返回上例中的MyIterator类的实例
+    }
+
+    public function add($value) {
+        $this->items[$this->count++] = $value;
+    }
+}
+
+$coll = new MyCollection();
+$coll->add('value 1');
+$coll->add('value 2');
+$coll->add('value 3');
+
+foreach ($coll as $key => $val) {
+    echo "key/value: [$key -> $val]\n\n";
+}
+```
+我们通过实现`IteratorAggregate`接口的的`getIterator`方法,使其返回上例中的`MyIterator`类的实例来实现所有的`Iterator`方法，本例程的输出结果：
+```
+rewinding
+current: value 1
+valid: 1
+current: value 1
+key: 0
+key/value: [0 -> value 1]
+
+next: value 2
+current: value 2
+valid: 1
+current: value 2
+key: 1
+key/value: [1 -> value 2]
+
+next: value 3
+current: value 3
+valid: 1
+current: value 3
+key: 2
+key/value: [2 -> value 3]
+
+next:
+current:
+valid:
+```
