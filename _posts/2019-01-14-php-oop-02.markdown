@@ -16,15 +16,14 @@ tags:
     - 匿名类
     - 重载
     - 遍历对象
-    - 魔术方法
     - Final 关键字
 ---
->在[浅析PHP 面向对象 第一篇](https://sunpwork.github.io/2019/01/12/php-oop-01/)中我们简单的介绍了PHP中的面向对象特性（属性、类常量、访问控制、对象继承、static关键字……），下面我们继续来了解PHP面向对象的以下特性：抽象类、对象接口、匿名类、重载、遍历对象、魔术方法、FInal 关键字（本章节案例内容来源 [PHP官方文档](http://php.net/manual/zh/language.oop5.php)）。
+>在[浅析PHP 面向对象 第一篇](https://sunpwork.github.io/2019/01/12/php-oop-01/)中我们简单的介绍了PHP中的面向对象特性（属性、类常量、访问控制、对象继承、static关键字……），下面我们继续来了解PHP面向对象的以下特性：抽象类、对象接口、匿名类、重载、遍历对象、FInal 关键字（本章节案例内容来源 [PHP官方文档](http://php.net/manual/zh/language.oop5.php)）。
 
 # 抽象类
 PHP支持抽象类和抽象方法。定义为抽象的类不能被实例化。任何一个类，如果它里面至少有一个方法是被声明为抽象的，那么这个类就必须被声明为抽象类。被定义为抽象的方法只是声明了其调用方式（参数），不能定义其具体的功能实现。
 
-继承一个抽象类的时候，子类必须定义父类的所有抽象方法；另外，这些方法的访问控制必须和父类中一样（或者更为宽松）。例如某个抽象方法被声明为受保护的，那么子类中实现的方法就应该声明为受保护的或者公有的，而不能定义为私有的。此外方法的调用方式必须匹配，即类型和所需参数数量必须一致，例如，子类定义了一个可选参数，而父类抽象方法的声明中没有，两者的声明并无冲突。
+继承一个抽象类的时候，子类必须定义父类的所有抽象方法；另外，这些方法的访问控制必须和父类中一样（或者更为宽松）。例如某个抽象方法被声明为受保护的，那么子类中实现的方法就应该声明为受保护的或者公有的，而不能定义为私有的。此外方法的调用方式必须匹配，即类型和所需参数数量必须一致，但是，子类定义了一个可选参数，而父类抽象方法的声明中没有，两者的声明并无冲突。
 
 ## 抽象类示例1
 ``` php
@@ -37,6 +36,7 @@ abstract class AbstractClass
     abstract protected function prefixValue($prefix);
 
     // 普通方法（非抽象方法）
+
     public function printOut() {
         print $this->getValue() . "\n";
     }
@@ -87,13 +87,13 @@ FOO_ConcreteClass2
 abstract class AbstractClass
 {
     // 我们的抽象方法仅需要定义需要的参数
+
     abstract protected function prefixName($name);
 
 }
 
 class ConcreteClass extends AbstractClass
 {
-
     // 我们的子类可以定义父类签名中不存在的可选参数
 
     public function prefixName($name, $separator = ".") {
@@ -288,11 +288,15 @@ echo "<pre>\n";
 $obj = new PropertyTest;
 
 $obj->a = 1;// 对不可访问属性赋值会调用 __set() 方法
+
 echo $obj->a . "\n\n";// 访问不可访问属性会调用 __get() 方法
 
 var_dump(isset($obj->a));// 对不可访问属性isset()时会调用 __isset() 方法
+
 unset($obj->a);// 对不可方法属性unpset()时会调用 __unset() 方法
+
 var_dump(isset($obj->a));// unset() 之后属性会从array数组中释放
+
 echo "\n";
 
 echo $obj->declared . "\n\n";// 对于已定义的可方法属性不会调用重载
@@ -300,6 +304,7 @@ echo $obj->declared . "\n\n";// 对于已定义的可方法属性不会调用重
 echo "Let's experiment with the private property named 'hidden':\n";
 echo "Privates are visible inside the class, so __get() not used...\n";
 echo $obj->getHidden() . "\n";// 只有从类外部访问不可访问属性，重载才会发生
+
 echo "Privates not visible outside of class, so __get() is used...\n";
 echo $obj->hidden . "\n";// 对 $hidden 属性进行重载
 ```
@@ -362,10 +367,15 @@ private => private var
 Iterator extends Traversable {
     /* 方法 */
     abstract public current ( void ) : mixed // 返回当前元素
+
     abstract public key ( void ) : scalar// 返回当前元素的键
+
     abstract public next ( void ) : void// 向前移动到下一个元素
+
     abstract public rewind ( void ) : void// 返回到迭代器的第一个元素
+
     abstract public valid ( void ) : bool// 检查当前位置是否有效
+
 }
 ```
 
@@ -386,10 +396,12 @@ class MyIterator implements Iterator
     public function rewind() {
         echo "rewinding\n";
         reset($this->var);// reset 将数组的内部指针指向第一个单元
+
     }
 
     public function current() {
         $var = current($this->var);// current 返回数组中的当前单元
+
         echo "current: $var\n";
         return $var;
     }
@@ -397,17 +409,20 @@ class MyIterator implements Iterator
     public function key() {
         $var = key($this->var);
         echo "key: $var\n";// key 返回数组中当前单元的键名
+
         return $var;
     }
 
     public function next() {
         $var = next($this->var);// next 将数组内部指针向前移动一位并返回下一个单元的值
+
         echo "next: $var\n";
         return $var;
     }
 
     public function valid() {
         $var = $this->current() !== false; // 判断当前单元是否有效
+
         echo "valid: {$var}\n";
         return $var;
     }
@@ -420,7 +435,7 @@ foreach ($it as $a => $b) {
     print "$a: $b\n";
 }
 ```
-在实现了`Iterator`接口之后，使用`foreach`遍历对象时，首先会调用`rewind()`方法将数组内部指针指向第一个元素，然后会依次调用`current()`方法返回当前单元的值，调用`valid()`方法判断当前单元是否有效，若有效会继续调用`key()`方法返回数组当前单元的键名，在这过程中`key()`和`current()`方法的返回值会被赋给`foreach`中的`$key`和`$value`，也就是本例中的`a`和`b`。最后会执行`next()`方法，然后重复执行以上操作，直至`current()`判断当前单元无效。上例输出结果：
+在实现了`Iterator`接口之后，使用`foreach`遍历对象时，首先会调用`rewind()`方法将数组内部指针指向第一个单元，然后会依次调用`current()`方法返回当前单元的值，调用`valid()`方法判断当前单元是否有效，若有效会继续调用`key()`方法返回数组当前单元的键名，在这过程中`key()`和`current()`方法的返回值会被赋给`foreach`中的`$key`和`$value`，也就是本例中的`$a`和`$b`。最后会执行`next()`方法，然后重复执行以上操作，直至`valid()`判断当前单元无效。上例输出结果：
 ```
 rewinding
 current: 1
@@ -457,8 +472,10 @@ class MyCollection implements IteratorAggregate
     // Required definition of interface IteratorAggregate
 
     // 实现IteratorAggregate接口的方法
+
     public function getIterator() {
         return new MyIterator($this->items);//返回上例中的MyIterator类的实例
+
     }
 
     public function add($value) {
@@ -502,3 +519,47 @@ next:
 current:
 valid:
 ```
+
+# Final关键字
+PHP 5新增了一个`final`关键字。如果父类中的方法被声明为final，则子类无法覆盖该方法。如果一个类被声明为final，则不能被继承
+## Final方法示例
+``` php
+<?php
+class BaseClass {
+   public function test() {
+       echo "BaseClass::test() called\n";
+   }
+   
+   final public function moreTesting() {
+       echo "BaseClass::moreTesting() called\n";
+   }
+}
+
+class ChildClass extends BaseClass {
+   public function moreTesting() {
+       echo "ChildClass::moreTesting() called\n";
+   }
+}
+// Results in Fatal error: Cannot override final method BaseClass::moreTesting()
+```
+`BaseClass`类中的`moreTesting`方法被声明为`final`，所以在其子类`ChildClass`中改方法不能被覆盖。
+
+## Final类示例
+```php 
+<?php
+final class BaseClass {
+   public function test() {
+       echo "BaseClass::test() called\n";
+   }
+   
+   // 这里无论你是否将方法声明为final，都没有关系
+   final public function moreTesting() {
+       echo "BaseClass::moreTesting() called\n";
+   }
+}
+
+class ChildClass extends BaseClass {
+}
+// 产生 Fatal error: Class ChildClass may not inherit from final class (BaseClass)
+```
+在这里`BaseClass`类被声明为`final`，所以该类不能被继承。
