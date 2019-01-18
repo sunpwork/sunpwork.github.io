@@ -22,7 +22,7 @@ tags:
 >在前两个章节中，我们了解了PHP面香对象的一些特性，在这一章节中，我们来继续了解剩下的知识点，包括：魔术方法、对象序列化、对象复制、对象比较、类型约束、后期静态绑定、对象和引用（本章节案例内容来源 [PHP官方文档](http://php.net/manual/zh/language.oop5.php)）。
 
 # 魔术方法
-`__construct()`,`__destruct()`,`__call()`,`__callStatic()`,`__get()`,`__set`,`__isset()`,`__unset()`,`__sleep()`,`__wakeup()`,`__toString()`,`__invoke()`,`__set_state()`,`__clone()`和`__debugInfo()`等方法在PHP中被称为“魔术方法”。在命名自己的类方法时不能使用这些方法名，除非是想使用其魔术功能。
+`__construct()`、`__destruct()`、`__call()`、`__callStatic()`、`__get()`、`__set`、`__isset()`、`__unset()`、`__sleep()`、`__wakeup()`、`__toString()`、`__invoke()`、`__set_state()`、`__clone()`和`__debugInfo()`等方法在PHP中被称为“魔术方法”。在命名自己的类方法时不能使用这些方法名，除非是想使用其魔术功能。
 
 ## `__sleep()`和`__wakeup()`
 ``` php
