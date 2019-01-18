@@ -1,0 +1,610 @@
+---
+layout:       post
+title:        "浅析PHP 面向对象 第二篇"
+subtitle:     ""
+date:         2019-01-17 10:05:00
+author:       "sunpwork"
+header-mask:  0.3
+catalog:      true
+tags:
+    - 语法基础
+    - PHP
+    - OOP
+    - 面向对象
+    - 魔术方法
+    - 对象复制
+    - 对象比较
+    - 类型约束
+    - 后期静态绑定
+    - 对象和引用
+    - 对象序列化
+---
+>在前两个章节中，我们了解了PHP面香对象的一些特性，在这一章节中，我们来继续了解剩下的知识点，包括：魔术方法、对象序列化、对象复制、对象比较、类型约束、后期静态绑定、对象和引用（本章节案例内容来源 [PHP官方文档](http://php.net/manual/zh/language.oop5.php)）。
+
+# 魔术方法
+`__construct()`,`__destruct()`,`__call()`,`__callStatic()`,`__get()`,`__set`,`__isset()`,`__unset()`,`__sleep()`,`__wakeup()`,`__toString()`,`__invoke()`,`__set_state()`,`__clone()`和`__debugInfo()`等方法在PHP中被称为“魔术方法”。在命名自己的类方法时不能使用这些方法名，除非是想使用其魔术功能。
+
+## `__sleep()`和`__wakeup()`
+``` php
+public __sleep ( void ) : array
+```
+``` php
+__wakeup ( void ) : void
+```
+`serialize()`(序列化)函数会检查类中是否存在一个魔术方法`__sleep()`。如果存在，该方法会先被调用，然后才执行序列化操作。此功能可以用于清理对象，并返回一个包含对象中所有应被序列化的变量名称的数组。如果该方法未返回任何内容，则`NULL`被序列化，并产生一个`E_NOTICE`级别的错误。
+
+与之相反，`unserialize()`(反序列化)会检查是否存在一个`__wakeup()`方法。如果存在，则会先调用`__wakeup`方法，预先准备对象需要的资源。
+``` php
+<?php
+class Connection 
+{
+    protected $link;
+    private $server, $username, $password, $db;
+    
+    public function __construct($server, $username, $password, $db)
+    {
+        $this->server = $server;
+        $this->username = $username;
+        $this->password = $password;
+        $this->db = $db;
+        $this->connect();
+    }
+    
+    private function connect()
+    {
+        $this->link = mysql_connect($this->server, $this->username, $this->password);
+        mysql_select_db($this->db, $this->link);
+    }
+    
+    public function __sleep()
+    {
+        return array('server', 'username', 'password', 'db');
+    }
+    
+    public function __wakeup()
+    {
+        $this->connect();
+    }
+}
+```
+本例是一个数据库连接的`Connection`类，当该类的实例被序列化时，通过`__sleep()`方法，在执行序列化操作是会保存`server`,`username`,`password`,`db`这些数据。当准备通过反序列化操作还原类的实例时，程序会先执行`__wakeup()`方法进行数据库连接操作。
+
+# `__toString()`
+``` php
+public __toString ( void ) : string
+```
+`__toString()`方法用于一个类被当成字符串时应该怎样回应。例如`echo $obj;`应该显示些什么。此方法必须返回一个字符串，否则会报错。
+``` php
+<?php
+// Declare a simple class
+class TestClass
+{
+    public $foo;
+
+    public function __construct($foo) 
+    {
+        $this->foo = $foo;
+    }
+
+    public function __toString() {
+        return $this->foo;
+    }
+}
+
+$class = new TestClass('Hello');
+echo $class;
+```
+以上例程会输出：
+```
+Hello
+```
+
+# `__invoke()`
+``` php
+__invoke ([ $... ] ) : mixed
+```
+当尝试以调用函数的方式调用一个对象时，`__invoke()`方法会被自动调用。
+``` php
+<?php
+class CallableClass 
+{
+    function __invoke($x) {
+        var_dump($x);
+    }
+}
+$obj = new CallableClass;
+$obj(5);
+var_dump(is_callable($obj));
+```
+以上例程会输出：
+```
+int(5)
+bool(true)
+```
+
+# 对象复制
+在多数情况下，我们并不需要完全复制一个对象来获得其中属性。但是如果复制的对象不是一个新对象，那么在一个对象中修改就会影响到另一个对象，所有在有些情况下，我们必须得到对象A的一个副本。对象复制可以通过clone关键字来完成。
+``` php
+$copy_of_object = clone $object;
+```
+当对象被复制后，PHP 5会对对象的所有属性执行一个浅复制。所有对象的引用属性 仍然会是一个指向一个指向原来的变量的引用。
+``` php
+__clone ( void ) : void
+```
+当复制完成时，如果定义了`__clone()`方法，则创建新的对象（复制生成的对象）中的`__clone()`方法会被调用，可用于修改属性的值（如果有必要的话）。
+``` php
+<?php
+class SubObject
+{
+    static $instances = 0;
+    public $instance;
+
+    public function __construct() {
+        $this->instance = ++self::$instances;
+    }
+
+    public function __clone() {
+        $this->instance = ++self::$instances;
+    }
+}
+
+class MyCloneable
+{
+    public $object1;
+    public $object2;
+
+    function __clone()
+    {
+      
+        // 强制复制一份this->object， 否则仍然指向同一个对象
+        $this->object1 = clone $this->object1;
+    }
+}
+
+$obj = new MyCloneable();
+
+$obj->object1 = new SubObject();
+$obj->object2 = new SubObject();
+
+$obj2 = clone $obj;
+
+
+print("Original Object:\n");
+print_r($obj);
+
+print("Cloned Object:\n");
+print_r($obj2);
+```
+以上例程会输出：
+```
+Original Object:
+MyCloneable Object
+(
+    [object1] => SubObject Object
+        (
+            [instance] => 1
+        )
+
+    [object2] => SubObject Object
+        (
+            [instance] => 2
+        )
+
+)
+Cloned Object:
+MyCloneable Object
+(
+    [object1] => SubObject Object
+        (
+            [instance] => 3
+        )
+
+    [object2] => SubObject Object
+        (
+            [instance] => 2
+        )
+
+)
+```
+
+# 对象比较
+当使用比较运算符`==`比较两个对象变量时，比较的原则是：如果两个对象的属性和属性值都相等，而且两个对象是同一个类的实例，那么这两个对象变量相等。而如果使用全等运算符`===`，这两个对象变量一定是要指向某个类的同一个实例(即同一个对象)。
+``` php
+<?php
+function bool2str($bool)
+{
+    if ($bool === false) {
+        return 'FALSE';
+    } else {
+        return 'TRUE';
+    }
+}
+
+function compareObjects(&$o1, &$o2)
+{
+    echo 'o1 == o2 : ' . bool2str($o1 == $o2) . "\n";
+    echo 'o1 != o2 : ' . bool2str($o1 != $o2) . "\n";
+    echo 'o1 === o2 : ' . bool2str($o1 === $o2) . "\n";
+    echo 'o1 !== o2 : ' . bool2str($o1 !== $o2) . "\n";
+}
+
+class Flag
+{
+    public $flag;
+
+    function Flag($flag = true) {
+        $this->flag = $flag;
+    }
+}
+
+class OtherFlag
+{
+    public $flag;
+
+    function OtherFlag($flag = true) {
+        $this->flag = $flag;
+    }
+}
+
+$o = new Flag();
+$p = new Flag();
+$q = $o;
+$r = new OtherFlag();
+
+echo "Two instances of the same class\n";
+compareObjects($o, $p);
+
+echo "\nTwo references to the same instance\n";
+compareObjects($o, $q);
+
+echo "\nInstances of two different classes\n";
+compareObjects($o, $r);
+```
+以上例程会输出：
+```
+Two instances of the same class
+o1 == o2 : TRUE
+o1 != o2 : FALSE
+o1 === o2 : FALSE
+o1 !== o2 : TRUE
+
+Two references to the same instance
+o1 == o2 : TRUE
+o1 != o2 : FALSE
+o1 === o2 : TRUE
+o1 !== o2 : FALSE
+
+Instances of two different classes
+o1 == o2 : FALSE
+o1 != o2 : TRUE
+o1 === o2 : FALSE
+o1 !== o2 : TRUE
+```
+
+# 类型约束
+PHP5 可以使用类型约束。函数的参数可以指定必须为对象，接口，数组或者`callable`。不过如果使用`NULL`作为参数的默认值，那么在调用函数的时候依然可以使用`NULL`作为实参。
+
+如果一个类或接口指定了类型约束，则其所有的子类或实现也都如此。
+
+类型约束不能用于标量类型如`int`或`string`。`Trait`也不允许。
+``` php
+<?php
+//如下面的类
+class MyClass
+{
+    /**
+     * 测试函数
+     * 第一个参数必须为 OtherClass 类的一个对象
+     */
+    public function test(OtherClass $otherclass) {
+        echo $otherclass->var;
+    }
+
+
+    /**
+     * 另一个测试函数
+     * 第一个参数必须为数组 
+     */
+    public function test_array(array $input_array) {
+        print_r($input_array);
+    }
+}
+
+    /**
+     * 第一个参数必须为递归类型
+     */
+    public function test_interface(Traversable $iterator) {
+        echo get_class($iterator);
+    }
+    
+    /**
+     * 第一个参数必须为回调类型
+     */
+    public function test_callable(callable $callback, $data) {
+        call_user_func($callback, $data);
+    }
+}
+
+// OtherClass 类定义
+class OtherClass {
+    public $var = 'Hello World';
+}
+```
+函数调用的参数与定义的参数类型不一致时，会抛出一个可捕获的致命错误。
+``` php
+<?php
+// 两个类的对象
+$myclass = new MyClass;
+$otherclass = new OtherClass;
+
+// 致命错误：第一个参数必须是 OtherClass 类的一个对象
+$myclass->test('hello');
+
+// 致命错误：第一个参数必须为 OtherClass 类的一个实例
+$foo = new stdClass;
+$myclass->test($foo);
+
+// 致命错误：第一个参数不能为 null
+$myclass->test(null);
+
+// 正确：输出 Hello World 
+$myclass->test($otherclass);
+
+// 致命错误：第一个参数必须为数组
+$myclass->test_array('a string');
+
+// 正确：输出数组
+$myclass->test_array(array('a', 'b', 'c'));
+
+// 正确：输出 ArrayObject
+$myclass->test_interface(new ArrayObject(array()));
+
+// 正确：输出 int(1)
+$myclass->test_callable('var_dump', 1);
+```
+类型约束不只是在类的成员函数里，也能使用在函数里：
+``` php
+// 如下面的类
+class MyClass {
+    public $var = 'Hello World';
+}
+
+/**
+ * 测试函数
+ * 第一个参数必须是 MyClass 类的一个对象
+ */
+function MyFunction (MyClass $foo) {
+    echo $foo->var;
+}
+
+// 正确
+$myclass = new MyClass;
+MyFunction($myclass);
+```
+类型约束允许`NULL`值：
+``` php
+/* 接受 NULL 值 */
+function test(stdClass $obj = NULL) {
+
+}
+
+test(NULL);
+test(new stdClass);
+```
+
+# 后期静态绑定
+PHP中有一个叫做后期静态绑定的功能，用于在继承范围内引用静态调用的类。
+
+准确说，后期静态绑定工作原理是存储在上一个“非转发调用”的类名。当进行静态方法调用时，该类名即为明确指定的那个(通常在`::`运算符左侧部分);当进行非静态方法调用时，即为该对象所属的类。所谓的“转发调用”指的是通过一下几种方式进行的静态调用：`self::`,`parent::`,`static::`以及`forward_static_call()`。可用`get_called_class()`函数来得到被调用的方法所在的类名，`static::`则指出了其范围。
+
+该功能从语言内部角度考虑被命名为“后期静态绑定”。“后期绑定”的意思是说，`static::`不再被解析为定义当前方法所在的类，而是在实际运行时计算的。也可以称之为“静态绑定”，因为它可以用于（但不限于）静态方法的调用。
+
+## `self::`的限制
+使用`self::`或者`__CLASS__`对当前类的静态引用，取决于定义当前方法所在的类：
+``` php
+<?php
+class A {
+    public static function who() {
+        echo __CLASS__;
+    }
+    public static function test() {
+        self::who();
+    }
+}
+
+class B extends A {
+    public static function who() {
+        echo __CLASS__;
+    }
+}
+
+B::test();
+```
+由于`B`类中的`test`方法是继承自`A`类，`self`对类的静态调用取决于定义当前方法所在的类，所以`B::test()`会调用`A`类的`who`方法，最终输出结果为:
+```
+A
+```
+# 后期静态绑定的用法
+后期静态绑定想通过引入一个新的关键字表示运行时最初调用的类来绕过限制。简单来说，这个关键字能够让你在上述例子中调用`test()`时引用的类是`B`而不是`A`。最终决定不引入新的关键字，而是在使用已经预留的`static`关键字。
+``` php
+<?php
+class A {
+    public static function who() {
+        echo __CLASS__;
+    }
+    public static function test() {
+        static::who(); // 后期静态绑定从这里开始
+    }
+}
+
+class B extends A {
+    public static function who() {
+        echo __CLASS__;
+    }
+}
+
+B::test();
+```
+以上例程会输出：
+``` php
+B
+```
+
+# 非静态环境下使用`static::`
+``` php
+<?php
+class A {
+    private function foo() {
+        echo "success!\n";
+    }
+    public function test() {
+        $this->foo();
+        static::foo();
+    }
+}
+
+class B extends A {
+   /* foo() will be copied to B, hence its scope will still be A and
+
+    * the call be successful */
+}
+
+class C extends A {
+    private function foo() {
+        /* original method is replaced; the scope of the new one is C */
+    }
+}
+
+$b = new B();
+$b->test();
+$c = new C();
+$c->test();   //fails
+```
+由于`C`类重写了`foo()`方法，`test()`方法是继承自`A`类的，所以`static::foo();`会尝试调用`C`类中的私有方法`foo()`，以上例程会输出：
+``` php
+success!
+success!
+success!
+
+
+Fatal error:  Call to private method C::foo() from context 'A' in /tmp/test.php on line 9
+```
+
+## 转发和非转发调用
+后期静态绑定的解析会一直取得一个完全解析了的静态调用为止。另一方面，如果静态调用使用`parent::`或者`self::`将转发调用信息。
+``` php
+<?php
+class A {
+    public static function foo() {
+        static::who();
+    }
+
+    public static function who() {
+        echo __CLASS__."\n";
+    }
+}
+
+class B extends A {
+    public static function test() {
+        A::foo();
+        parent::foo();
+        self::foo();
+    }
+
+    public static function who() {
+        echo __CLASS__."\n";
+    }
+}
+class C extends B {
+    public static function who() {
+        echo __CLASS__."\n";
+    }
+}
+
+C::test();
+```
+以上例程会输出：
+``` php
+A
+C
+C
+```
+
+# 对象和引用
+PHP的引用是别名，就是两个不同的变量名字指向相同的内容。在PHP 5中，一个对象变量已经不再保存整个对象的值。只是保存一个标识符来访问真正的对象内容。当对象作为参数传递，作为结果返回，或者赋值给另外一个变量，另外一个变量跟原来的不是引用的关系，只是他们都保存着同一个标识符的拷贝，这个标识符指向同一个对象的真正内容。
+``` php
+<?php
+class A {
+    public $foo = 1;
+}  
+
+$a = new A;
+$b = $a;     // $a ,$b都是同一个标识符的拷贝
+
+             // ($a) = ($b) = <id>
+$b->foo = 2;
+echo $a->foo."\n";
+
+
+$c = new A;
+$d = &$c;    // $c ,$d是引用
+
+             // ($c,$d) = <id>
+
+$d->foo = 2;
+echo $c->foo."\n";
+
+
+$e = new A;
+
+function foo($obj) {
+    // ($obj) = ($e) = <id>
+    $obj->foo = 2;
+}
+
+foo($e);
+echo $e->foo."\n";
+```
+以上例程会输出：
+```
+2
+2
+2
+```
+
+# 对象序列化
+所有的PHP里面的值都可以使用函数`serialize()`来返回一个包含字节流的字符串来表示。`unserialize()`函数能够重新把字符串变回PHP原来的值。序列化一个对象将会保存对象的所有变量，但是不会保存对象的方法，只会保存类的名字。
+
+为了能够`unserialize()`一个对象，这个对象的类必须已经定义过。如果序列化类A的一个对象，将会返回一个跟类A相关，而且包含了对象所有变量值的字符串。如果想要在另外一个文件中反序列化一个对象，这个对象的类必须在解序列化之前定义，可以通过包含一个定义该类的文件或者使用函数`spl_autoload_register()`来实现。
+``` php
+<?php
+// A.php:
+  
+  class A {
+      public $one = 1;
+    
+      public function show_one() {
+          echo $this->one;
+      }
+  }
+  
+// page1.php:
+
+  require_once("A.php");
+  
+  $a = new A;
+  $s = serialize($a);
+  // 把变量$s保存起来以便文件page2.php能够读到
+  file_put_contents('store', $s);
+
+// page2.php:
+  
+  // 要正确了解序列化，必须包含下面一个文件
+  require_once("B.php");
+
+  $s = file_get_contents('store');
+  $a = unserialize($s);
+
+  // 现在可以使用对象$a里面的函数 show_one()
+  $a->show_one();
+```
