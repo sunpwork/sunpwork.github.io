@@ -12,7 +12,7 @@ tags:
     - closure
 
 ---
->年前立了个flag说2019年要经常更博，结果三四个月过去了，一篇没更。说来惭愧，最近正在准备web前端面试，发现自己对JavaScript中闭包这个概论不是很了解，到网上看了介绍，这里留个记录。本章节内容来源[思否老哥的文章](https://segmentfault.com/a/1190000006875662#articleHeader3)再加上自己的一些理解.
+>年前立了个flag说2019年要经常更博，结果三四个月过去了，一篇没更。说来惭愧，最近正在准备web前端面试，发现自己对JavaScript中闭包这个概论不是很了解，到网上看了介绍，这里留个记录。本章节内容来源[思否老哥的文章](https://segmentfault.com/a/1190000006875662#articleHeader3)再加上自己的一些理解。
 
 # 什么是闭包(Closure)
 - 闭包是由函数引用其周边状态绑定在一起形成的组合结构，在JavaScript中，闭包在每个函数被创建时形成。
@@ -31,6 +31,7 @@ function func(){
 
 # 闭包的注意事项
 - 通常，函数的作用域及其所有变量都会在函数执行结束后被销毁。但是，在创建了一个闭包以后，这个函数的作用域就会一直保存到闭包不存在为止。
+
 ``` JavaScript
 function makeAdder(x){
     return (y) => x+y;
@@ -76,6 +77,7 @@ test(); // 输出 0~9
 至于`let`与`var`的区别，这里我们不做篇幅去讲解了。
 
 - 闭包中的this对象
+
 ``` JavaScript
 var name = "The Windows";
 
@@ -88,6 +90,7 @@ var obj = {
 }
 console.log(obj.getName()()) // The Window
 ```
+
 `obj.getName()()`实际上是在全局作用域中调用了匿名函数，`this`指向了window。匿名函数的指向环境具有全局性，因此其`this`对象通常指向window
 
 ``` JavaScript
