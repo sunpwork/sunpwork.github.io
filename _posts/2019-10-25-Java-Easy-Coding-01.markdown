@@ -90,6 +90,8 @@ static class Node<K,V> implements Map.Entry<K,V>{
 | protected | NO | OK | OK | OK |
 | 无 | NO | NO | OK | OK |
 | private | NO | NO | NO | OK |
+
+
 *private 修饰的属性和方法在同一包内，即使并非继承关系也是可见的。*
 
 ## this与super
