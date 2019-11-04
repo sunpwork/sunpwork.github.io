@@ -2,7 +2,7 @@
 layout:       post
 title:        "码出高效 Java开发手册-学习笔记01"
 subtitle:     "聊一聊面向对象"
-date:         2019-10-25 11:30:00
+date:         2019-11-04 13:30:00
 author:       "sunpwork"
 header-mask:  0.3
 catalog:      true
@@ -15,7 +15,7 @@ tags:
 >最近在公司准备转后端岗，公司的后端大佬让我买本《码出高效 Java开发手册》自己先看一看，到时候会有考核。这两天正好开发任务不是很重，就翻阅了看了看，确实质量很高。之前在学校里面学Java也是野路子出身，没有系统化的学习过，正好通过这本书来查漏补缺。立个flag，这两个月会不定期的更新学习笔记。
 
 # 面向对象（OOP）理念
-在编程语言的发展过程中，首先出现的是面向过程思想，面向过程让计算机有步骤地做一件事情，是一种过程话的叙事思维。但是在开发过程中，软件维护、软件复用存在着巨大的困难，模块之间互相耦合，流程互相穿插，牵一发而动全身。面向对象提出了从人类思维角度提出解决问题的步骤和方案。
+在编程语言的发展过程中，首先出现的是面向过程思想，面向过程让计算机有步骤地做一件事情，是一种过程化的叙事思维。但是在开发过程中，软件维护、软件复用存在着巨大的困难，模块之间互相耦合，流程互相穿插，牵一发而动全身。面向对象提出了从人类思维角度提出解决问题的步骤和方案。
 
 书上是拿开门这个动作举例的，面向过程是`open(Door door)`，动宾结构，`door`是被作为操作对象的参数传入方法的，方法内定义开门的具体步骤实现。而在面向对象的世界里，首先先定义一个`Door`对象，然后抽象出门的属性和相关操作，属性可以包括尺寸、颜色、开启方式等等；操作包括`open()`和`close()`两个必备的行为，是主谓结构。
 
@@ -23,7 +23,7 @@ tags:
 
 # Java中的类
 ## 类的定义
-类的定义有访问级别、类型、类名、是否抽象、是否静态、泛型标识、继承或实现关键字、父类或接口名称等组成。Java类主要有两个组成部分：成员和方法。在定义Java类时，推荐首先定义变量，然后定义方法。公有方法是类的调用者和维护者最关心的，因此最好首屏展示；保护方法虽然只被子类关心，但也可能是模版设计模式下的核心方法，重要性仅次于公有方法；私有方法对外部来说是一个黑盒实现，因此不需要被特别关注；最好是`getter/setter`方法，虽然他们也是公有方法，但是承载的价值比较低，所以放在类最后。
+类的定义有访问级别、类型、类名、是否抽象、是否静态、泛型标识、继承或实现关键字、父类或接口名称等组成。Java类主要有两个组成部分：成员和方法。在定义Java类时，推荐首先定义变量，然后定义方法。公有方法是类的调用者和维护者最关心的，因此最好首屏展示；保护方法虽然只被子类关心，但也可能是模版设计模式下的核心方法，重要性仅次于公有方法；私有方法对外部来说是一个黑盒实现，因此不需要被特别关注；最后是`getter/setter`方法，虽然他们也是公有方法，但是承载的价值比较低，所以放在类最后。
 
 ## 接口和抽象类
 定义类的过程是抽象和封装的过程，而接口和抽象类则是对实体类进行更高层次的抽象，仅定义公共行为和特征。接口和抽象类的共同点是都不能被实例化，但都可以定义引用变量指向实例对象。
@@ -43,7 +43,7 @@ tags:
 
 抽象类在被继承时体现的是`is-a`关系，接口在被实现时体现的是`can-do`关系。接口说顶级的“类”，虽然关键字是`interface`，但是编译之后的字节码扩展名还是 .class。抽象类是二当家，接口位于顶层，而抽象类对各个接口进行了组合，然后实现部分接口行为，其中`AbstractCollection`是最典型的抽象类：
 
-```Java
+``` Java
 public abstract class AbstractCollection<E> implements Collection<E> {
 	// Collection 定义的抽象方法，但本内没有实现
 	// Collection 接口定义的方法，size()这个方法对于链表和顺序表有不同的实现方式
@@ -56,6 +56,7 @@ public abstract class AbstractCollection<E> implements Collection<E> {
 	}
 }
 ```
+
 Java语言中类的继承采用单继承形式，避免继承泛滥、菱形继承、循环继承，甚至“四不像”实现类的出现。在JVM中，一个类如果有多个直接父类，那么方法的绑定机制会变得非常复杂，接口继承接口，关键字是`extends`，而不是`implements`，允许多重继承，是因为接口有契约式的行为约定，没有任何具体实现和属性，某个实体类实现多重继承后的接口时，只是说明"can do many things"。
 
 ## 内部类
@@ -80,6 +81,7 @@ static class Node<K,V> implements Map.Entry<K,V>{
 	valotile Node<K,V> next;
 }
 ```
+
 如上所示的源码在`ConcurrentHashMap`中定义的Node静态内部类，用于表示一个节点数据，属于包内可见。Node的父类Entry上Map的静态内部类，之所以可以被Node继承是因为两个外部类同属一个包。
 
 ## 访问控制权限
@@ -90,9 +92,7 @@ static class Node<K,V> implements Map.Entry<K,V>{
 | protected | NO | OK | OK | OK |
 | 无 | NO | NO | OK | OK |
 | private | NO | NO | NO | OK |
-
-
-*private 修饰的属性和方法在同一包内，即使并非继承关系也是可见的。*
+*protected 修饰的属性和方法在同一包内，即使并非继承关系也是可见的。*
 
 ## this与super
 
@@ -101,8 +101,6 @@ static class Node<K,V> implements Map.Entry<K,V>{
 | 基本概念 | 访问本类实例的属性和方法 | 由子类访问父类中的实例属性和方法 |
 | 查找范围| 先找本类，没有则找父类 | 直接查找父类 |
 | 特殊功能 | 单独使用时，表示当前对象 | 在子类覆写父类方法时，可以访问父类同名方法  |
-
-
 `this`和`super`的相同点：
 
 - 都是关键字，起指代作用
@@ -232,3 +230,157 @@ getter和setter方法的定义非常简单，正因如此，工程师会放松�
 - 方法名、参数类型和个数必须严格一致。为了使编译器准确地判断是否是覆写行为，所有的覆写方法必须加上@Override注解。此时编译器会自动检查覆写方法签名是否一致。
 
 覆写只能针对非静态、非final、非构造方法。由于静态方法属于类，如果父类和子类存在同名静态方法，那么两者都可以被正常调用。如果方法有final修饰，则表示此方法不可被覆写。
+
+# 重载
+
+在同一个类中，如果多个方法有相同的方法名称、不同的参数类型、参数个数、参数顺序，即称为重载，类中的构造方法就是典型的重载。在编译器的眼里，方法名称+参数列表，组成一个唯一键，称为方法签名，JVM通过这个唯一键决定调用哪种重载的方法。这里要注意，方法的返回值并不是方法签名的一部分。
+
+``` Java
+public class OverLoadMethods {
+	// 第一种方法：无参
+	public void overloadMethod(){
+		System.out.printin("无参方法");
+	}
+	
+	// 第二种方法：基本数据类型
+	public void overloadMethod(int param){
+		System.out.printin("参数为基本类型int的方法");
+	}
+	
+	// 第三种方法：包装数据类型
+	public void overloadMethod(Integer param){
+		System.out.printin("参数为包装类型Integer的方法");
+	}
+	
+	// 第四种方法：可变参数，可以接受0～n个Integer对象
+	public void overloadMethod(Integer... param){
+		System.out.printin("可变参数方法");
+	}
+	
+	// 第五种方法：Object对象
+	public void overloadMethod(Object param){
+		System.out.printin("参数为Object的方法");
+	}
+}
+```
+
+第一种和第二种无需多说，前者无参，后者为有参。但是如果我们调用`overloadMethod(7)`会命中哪个重载的方法呢？JVM在重载方法中，选择合适的目标方法的顺序如下：
+
+- 精确匹配
+- 如果是基本数据类型，自动转换成更大表示范围的基本类型
+- 通过自动拆箱与装箱
+- 通过子类向上转型继承路线依次匹配
+- 通过可变参数匹配
+
+所以`overloadMethod(7)`会调用int参数的方法，如果是`new Integer(7)`的话，会调用Integer参数方法。
+
+# 泛型
+泛型的本质是类型参数话，解决不确定具体对象类型的问题。在面向对象编程语言中，允许程序员在强类型校验下定义某些可变部分，以达到代码复用的目的。
+
+泛型可以定义在类、接口、方法中，编译器通过识别尖括号和尖括号内的字母来解析泛型。在泛型定义时，约定俗成的符号包括：E代表Element，用于集合中的元素；T代表the Type of object，代表某个类；K代表Key、V代表Value，用于键值对元素。在使用泛型时我们需要注意：
+
+- 尖括号里的每个元素都指代一种未知类型
+- 尖括号的位置非常讲究，必须在类名之后或方法返回值前
+- 泛型在定义处只具备Object方法的能力
+- 对于编译之后的字节码命令，Java使用的是类型擦除的方式，编译之后，所有的泛型都会被强制类型转换为Object。因此，泛型就是在编译期增加了一道检查而已，目的是促使程序员在使用泛型时安全放置和使用数据。
+
+我们以微波炉加热食物来举例，在没有泛型的场景中，往往会写出：
+
+``` Java
+class Stove {
+	public static Object heat(Object food){
+		System.out.println(food + "is done");
+		return food;
+	}
+	
+	public static void main(String[] args){
+		Meat meat = new Meat();
+		meat = (Meat)Stove.heat(meat);
+		Soup soup = new Soup();
+		soup = (Soup)Stove.heat(soup);
+	}
+}
+```
+
+为了避免给每种食材定义一个加热方法，我们讲`heat()`的参数和返回值定义为Object。这样做虽然增强了类的灵活性，但却存在强制类型转换的风险。使用泛型可以完美的解决这个问题：
+
+``` Java
+public class Stove {
+	public static <T> T heat(T food){
+		System.out.println(food + “is doon”);
+		return food;
+	}
+	
+	public static main(String[] args){
+		Meat meat = new Meat();
+		meat = Stove.heat(meat);
+		
+		Soup soup = new Soup();
+		soup = Stove.heat(soup);
+	}
+}
+```
+
+通过使用泛型，既可以避免给每种食材都定义一个加热方法，也可以避免使用`Object`作为输入和输出，带来强制转换的风险。
+
+# 数据类型
+## 基本数据类型
+
+虽然Java时面向对象编程语言，一切皆是对象，但是为了兼容人类根深蒂固的数据处理习惯，加快常规数据的处理速度，提供了9种基本数据类型。基本数据类型时指不可再分的原子数据类型，内存中直接存储此类型的值，通过内存地址即可直接访问到数据。Java的9种数据类型包括`boolean`、`byte`、`char`、`short`、`int`、`long`、`float`、`double`和`refvar`。前8种数据类型表示生活中的真假、字符、整数和小数，最后一种`refvar`数面向对象世界中的引用变量，也叫句柄。
+
+
+| 类型名称 | 默认值 | 大小 | 最小值 | 最大值 | 包装类 | 缓存区间 |
+| ------- | ------- | ------- | ------- | ------- | ------- | ------- |
+| boolean | false | 1 B | 0(false) | 1(true) | Boolean | 无 |
+| byte | (byte)0 | 1 B | -128 | 127 | Byte | -128～127 |
+| char | ‘\u0000’ | 2 B| ‘\u0000’ | ‘\uFFFF’ | Character | (char)0~(char)127 |
+| short | (short)0 | 2 B | -2^15 | 2^15 - 1 | Short | -128~127 |
+| int | 0 | 4 B | -2^31 | 2^31 - 1 | Integer | -128~127 |
+| long | 0L | 8 B | -2^63 | 2^63 - 1 | Long | -128~127|
+| float | 0.0f | 4 B | 1.4e - 45 | 1.4e + 38 | Float | 无 |
+| double | 0.0d | 8 B | 4.9e - 324 | 1.798e + 308 | Double | 无 |
+
+引用分为两种数据类型：引用对象本身和引用指向对象。在这本书里把引用变量（Reference Variable）称为refvar，而把引用指向的实际对象（Referred Object）称为refobj。
+
+refvar时基本的数据类型，它的默认值时null，存储refobj的首地址，可以直接使用`==`进行等值判断。而平时使用`refvar.hashCode()`返回的值，只是对象的某种哈希计算，与地址有关。作为一个引用变量，不管指向任何类，refvar均占用4B空间。而refobj最小占用的存储空间时12B（用于存储基本信息，即对象头），但是由于存储空间分配必须时8的倍数，所以初始分配的空间至少时16B。
+
+一个refvar至多存储一个refobj的首地址，但一个refobj可以被多个refvar引用指向。如果某个refobj没有被任何refvar指向，那么它迟早会被垃圾回收。
+
+## 包装类型
+8种基本数据类型都有相应的包装类，因为Java设计理念是一切皆是对象。包装类的存在解决了基本数据类型无法做到的事情：泛型类型参数、序列化、类型转换、高频区间数据缓存（如上表的缓存区间）。除了Float和Double外，其他的包装数据类型都会有缓存，以Integer为例，缓存的实现如下：
+
+``` Java
+@HotSpotIntrinsicCandidate
+public static Integer ValueOf(int i){
+	if(i >= IntegerCache.low && i <= IntegerCache.highj){
+		return IntegerCache.cache[i + (-IntegerCache.low)];
+	}
+	return new Integer(i);
+}
+```
+
+如上源代码，赋值数据i在缓存区间内直接返回缓存中的Integer对象，否则就会new一个对象。所以我们在定义有缓存区间的对象时，应该使用`valueOf()`，合理利用缓存。
+
+在选择使用包装类还上基本数据类型时，推荐使用如下方式：
+
+- 所有的POJO类属性必须使用包装数据类型
+- RPC(Remote Procedure Call Protocol 远程过程调用协议)方法的返回值和参数必须使用包装数据类型
+- 所有的局部变量推荐使用基本数据类型。
+
+## 字符串
+字符串类型时常用的数据类型，它在JVM中的地位不比基本数据类型低。字符串相关类型主要有三种：String、StringBuilder、StringBuffer。
+
+- String时只读字符串，典型的immutable（不可变）对象，对它的任何改动，其实都是创建一个新对象，再把引用指向该对象。String对象赋值操作后，会在常量池中进行缓存，如果下次申请创建对象时，缓存中已经存在，则直接返回相应引用给创建者
+- StringBuffer可以在原对象上进行修改，并且是线程安全的
+- StringBuilder和StringBuffer都是继承自AbstractStringBuilder，也是可以在原对象上进行修改的，但是StringBuilder是非线程安全的，执行效率要比StringBuffer高。
+
+虽然String对象支持相加操作，但是如果需要频繁的修改String的值，如在循环体内，字符串的方法应该使用StringBuilder的append方法进行扩展，如下的操作是不被推荐的
+
+``` Java
+String str = "start";
+for(int i = 0; i < 100; i ++){
+	str = str + "hello";
+}
+```
+
+此段代码的内部实现逻辑是每次循环都会new 一个StringBuilder对象，然后进行append操作，最后通过toString方法返回一个String对象，严重浪费资源、影响性能。
